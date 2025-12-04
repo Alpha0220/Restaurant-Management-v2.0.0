@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - GOOGLE_SERVICE_ACCOUNT_EMAIL=\${GOOGLE_SERVICE_ACCOUNT_EMAIL}
+      - GOOGLE_PRIVATE_KEY=\${GOOGLE_PRIVATE_KEY}
+      - SPREADSHEET_ID=\${SPREADSHEET_ID}
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    restart: always

@@ -1,0 +1,160 @@
+'use client';
+
+import { getMenuItems, submitOrder } from '@/app/actions';
+import { useEffect, useState } from 'react';
+import { ShoppingCart, Plus, Minus, X } from 'lucide-react';
+
+export default function POSPage() {
+  const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [cart, setCart] = useState<{ name: string, price: number, quantity: number }[]>([]);
+  const [message, setMessage] = useState('');
+  const [isCartOpen, setIsCartOpen] = useState(false); // For mobile cart toggle
+
+  useEffect(() => {
+    getMenuItems().then(setMenuItems);
+  }, []);
+
+  const addToCart = (item: any) => {
+    const existing = cart.find(c => c.name === item.name);
+    if (existing) {
+      setCart(cart.map(c => c.name === item.name ? { ...c, quantity: c.quantity + 1 } : c));
+    } else {
+      setCart([...cart, { name: item.name, price: item.price, quantity: 1 }]);
+    }
+    setMessage('');
+  };
+
+  const removeFromCart = (itemName: string) => {
+    setCart(cart.filter(c => c.name !== itemName));
+  };
+
+  const updateQuantity = (itemName: string, delta: number) => {
+    setCart(cart.map(c => {
+      if (c.name === itemName) {
+        return { ...c, quantity: Math.max(1, c.quantity + delta) };
+      }
+      return c;
+    }));
+  };
+
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+    const result = await submitOrder(cart);
+    setMessage(result.message);
+    if (result.success) {
+      setCart([]);
+      setIsCartOpen(false);
+    }
+  };
+
+  const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  return (
+    <div className="flex flex-col md:flex-row h-screen bg-gray-100 pb-16 md:pb-0 overflow-hidden">
+      {/* Menu Section */}
+      <div className="flex-1 p-4 overflow-y-auto">
+        <h1 className="text-2xl font-bold mb-4 text-gray-800">เลือกเมนู</h1>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {menuItems.map((item, index) => (
+            <div
+              key={`${item.name}-${index}`}
+              onClick={() => addToCart(item)}
+              className="bg-white p-3 rounded-lg shadow cursor-pointer hover:shadow-lg transition-shadow flex flex-col justify-between h-32"
+            >
+              <h3 className="font-bold text-gray-800 line-clamp-2">{item.name}</h3>
+              <div className="flex justify-between items-end mt-2">
+                <p className="text-blue-600 font-bold">฿{item.price}</p>
+                <div className="bg-blue-100 p-1 rounded-full text-blue-600">
+                  <Plus className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile Cart Toggle Button */}
+      {cart.length > 0 && (
+        <button
+          onClick={() => setIsCartOpen(!isCartOpen)}
+          className="md:hidden fixed bottom-20 right-4 bg-blue-600 text-white p-4 rounded-full shadow-lg z-40 flex items-center gap-2"
+        >
+          <ShoppingCart className="w-6 h-6" />
+          <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full absolute -top-1 -right-1">
+            {totalItems}
+          </span>
+        </button>
+      )}
+
+      {/* Cart Section (Sidebar on Desktop, Bottom Sheet/Modal on Mobile) */}
+      <div className={`
+        fixed inset-0 z-50 bg-black bg-opacity-50 md:static md:bg-transparent md:z-auto md:w-96
+        transition-opacity duration-300
+        ${isCartOpen ? 'opacity-100 visible' : 'opacity-0 invisible md:opacity-100 md:visible'}
+      `}>
+        <div className={`
+          absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl h-[80vh] md:h-full md:static md:rounded-none md:shadow-none flex flex-col
+          transform transition-transform duration-300
+          ${isCartOpen ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}
+        `}>
+          <div className="p-4 border-b flex justify-between items-center bg-gray-50 md:bg-white">
+            <h2 className="text-xl font-bold text-gray-800">รายการที่เลือก</h2>
+            <button onClick={() => setIsCartOpen(false)} className="md:hidden p-2 text-gray-500">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4">
+            {cart.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                <ShoppingCart className="w-12 h-12 mb-2 opacity-20" />
+                <p>ยังไม่มีรายการ</p>
+              </div>
+            ) : (
+              cart.map((item, index) => (
+                <div key={`${item.name}-${index}`} className="flex justify-between items-center mb-4 border-b pb-2 last:border-0">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900">{item.name}</h4>
+                    <p className="text-sm text-gray-500">฿{item.price} x {item.quantity}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => updateQuantity(item.name, -1)} className="p-1 bg-gray-100 rounded-full hover:bg-gray-200">
+                      <Minus className="w-4 h-4 text-gray-600" />
+                    </button>
+                    <span className="font-medium w-4 text-center">{item.quantity}</span>
+                    <button onClick={() => updateQuantity(item.name, 1)} className="p-1 bg-gray-100 rounded-full hover:bg-gray-200">
+                      <Plus className="w-4 h-4 text-gray-600" />
+                    </button>
+                    <button onClick={() => removeFromCart(item.name)} className="ml-2 text-red-500 hover:text-red-700">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="p-4 border-t bg-gray-50 md:bg-white">
+            <div className="flex justify-between text-xl font-bold mb-4 text-gray-800">
+              <span>รวมทั้งหมด</span>
+              <span className="text-blue-600">฿{total.toFixed(2)}</span>
+            </div>
+            <button
+              onClick={handleCheckout}
+              disabled={cart.length === 0}
+              className="w-full py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-md"
+            >
+              ชำระเงิน
+            </button>
+            {message && (
+              <p className={`text-center mt-2 text-sm ${message.includes('สำเร็จ') ? 'text-green-600' : 'text-red-600'}`}>
+                {message}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
