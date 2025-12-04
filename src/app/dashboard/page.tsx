@@ -3,12 +3,23 @@
 import { getDashboardStats } from '@/app/actions';
 import { useEffect, useState } from 'react';
 
+import Loading from '@/components/Loading';
+
 export default function DashboardPage() {
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<any>({
+    totalSales: 0,
+    totalCost: 0,
+    grossProfit: 0,
+    totalStockExpenditure: 0,
+    netProfit: 0,
+    itemSales: {},
+    orders: []
+  });
   const [filterType, setFilterType] = useState<'all' | 'day' | 'month' | 'year' | 'custom'>('month');
   const [dateValue, setDateValue] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Set default date value based on filter type
@@ -25,13 +36,22 @@ export default function DashboardPage() {
   }, [filterType]);
 
   useEffect(() => {
-    getDashboardStats(filterType, dateValue, startDate, endDate).then(setStats);
+    setIsLoading(true);
+    getDashboardStats(filterType, dateValue, startDate, endDate).then((data) => {
+      setStats(data);
+      setIsLoading(false);
+    });
   }, [filterType, dateValue, startDate, endDate]);
 
-  if (!stats) return <div className="p-6 text-center">กำลังโหลดข้อมูล...</div>;
-
   return (
-    <div className="p-4 bg-gray-100 min-h-screen pb-20 md:pb-4">
+    <div className="p-4 bg-gray-100 min-h-screen pb-20 md:pb-4 relative">
+      {/* Overlay Loading */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center min-h-screen">
+          <Loading />
+        </div>
+      )}
+
       <h1 className="text-2xl font-bold mb-6 text-gray-800">ภาพรวมร้านค้า</h1>
 
       {/* Filters */}
@@ -39,31 +59,31 @@ export default function DashboardPage() {
         <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
           <button
             onClick={() => setFilterType('all')}
-            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${filterType === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+            className={`px-2 py-2 text-sm whitespace-nowrap ${filterType === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
           >
             ทั้งหมด
           </button>
           <button
             onClick={() => setFilterType('day')}
-            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${filterType === 'day' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+            className={`px-2 py-2  text-sm whitespace-nowrap ${filterType === 'day' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
           >
             รายวัน
           </button>
           <button
             onClick={() => setFilterType('month')}
-            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${filterType === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+            className={`px-2 py-2  text-sm whitespace-nowrap ${filterType === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
           >
             รายเดือน
           </button>
           <button
             onClick={() => setFilterType('year')}
-            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${filterType === 'year' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+            className={`px-2 py-2  text-sm whitespace-nowrap ${filterType === 'year' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
           >
             รายปี
           </button>
           <button
             onClick={() => setFilterType('custom')}
-            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${filterType === 'custom' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+            className={`px-2 py-2  text-sm whitespace-nowrap ${filterType === 'custom' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
           >
             กำหนดเอง
           </button>
@@ -80,37 +100,57 @@ export default function DashboardPage() {
         )}
 
         {filterType === 'custom' && (
-          <div className="flex gap-2 items-center w-full md:w-auto">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="border rounded-md px-3 py-2 w-full md:w-auto"
-            />
-            <span>ถึง</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="border rounded-md px-3 py-2 w-full md:w-auto"
-            />
+          <div className="flex flex-col md:flex-row gap-2 items-start md:items-center w-full md:w-auto mt-2 md:mt-0">
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <span className="text-sm text-gray-600 whitespace-nowrap md:hidden">เริ่ม:</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="border rounded-md px-3 py-2 w-full md:w-auto text-sm"
+              />
+            </div>
+            <span className="hidden md:inline">ถึง</span>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <span className="text-sm text-gray-600 whitespace-nowrap md:hidden">ถึง:</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="border rounded-md px-3 py-2 w-full md:w-auto text-sm"
+              />
+            </div>
           </div>
         )}
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {/* Section 1: Sales Performance */}
+      <h2 className="text-lg font-semibold text-gray-700 mb-3">ผลประกอบการจากการขาย (Sales Performance)</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
           <h3 className="text-gray-500 text-sm font-medium uppercase">ยอดขายรวม</h3>
-          <p className="text-3xl font-bold text-gray-800">฿{stats.totalSales.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-gray-800">฿{stats.totalSales.toFixed(2)}</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
-          <h3 className="text-gray-500 text-sm font-medium uppercase">ต้นทุนรวม</h3>
-          <p className="text-3xl font-bold text-gray-800">฿{stats.totalCost.toFixed(2)}</p>
+          <h3 className="text-gray-500 text-sm font-medium uppercase">ต้นทุนขาย (COGS)</h3>
+          <p className="text-2xl font-bold text-gray-800">฿{stats.totalCost.toFixed(2)}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
+          <h3 className="text-gray-500 text-sm font-medium uppercase">กำไรขั้นต้น</h3>
+          <p className="text-2xl font-bold text-gray-800">฿{stats.grossProfit.toFixed(2)}</p>
+        </div>
+      </div>
+
+      {/* Section 2: Cash Flow */}
+      <h2 className="text-lg font-semibold text-gray-700 mb-3">กระแสเงินสดสุทธิ (Cash Flow)</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-orange-500">
+          <h3 className="text-gray-500 text-sm font-medium uppercase">ต้นทุนซื้อวัตถุดิบ</h3>
+          <p className="text-2xl font-bold text-gray-800">฿{stats.totalStockExpenditure.toFixed(2)}</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
           <h3 className="text-gray-500 text-sm font-medium uppercase">กำไรสุทธิ</h3>
-          <p className="text-3xl font-bold text-gray-800">฿{stats.profit.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-gray-800">฿{stats.netProfit.toFixed(2)}</p>
         </div>
       </div>
 

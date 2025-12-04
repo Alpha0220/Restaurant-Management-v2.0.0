@@ -1,6 +1,6 @@
 'use server';
 
-import { getSheet } from '@/lib/googleSheets';
+import { getSheet, getCachedRows, invalidateCache } from '@/lib/googleSheets';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -38,6 +38,7 @@ export async function addStockItem(prevState: any, formData: FormData) {
       date: new Date().toISOString(),
     });
 
+    invalidateCache('Stock'); // Invalidate cache
     revalidatePath('/stock');
     return { message: 'เพิ่มสต็อกเรียบร้อยแล้ว!' };
   } catch (error) {
@@ -48,8 +49,7 @@ export async function addStockItem(prevState: any, formData: FormData) {
 
 export async function getStockItems() {
   try {
-    const sheet = await getSheet('Stock', ['name', 'quantity', 'price', 'user', 'date']);
-    const rows = await sheet.getRows();
+    const rows = await getCachedRows('Stock', ['name', 'quantity', 'price', 'user', 'date']);
     return rows.map(row => ({
       name: row.get('name'),
       quantity: row.get('quantity'),
@@ -92,6 +92,7 @@ export async function addMenuItem(prevState: any, formData: FormData) {
       date: new Date().toISOString(),
     });
 
+    invalidateCache('Menu'); // Invalidate cache
     revalidatePath('/menu');
     return { message: 'เพิ่มเมนูเรียบร้อยแล้ว!' };
   } catch (error) {
@@ -103,11 +104,12 @@ export async function addMenuItem(prevState: any, formData: FormData) {
 export async function deleteMenuItem(name: string) {
   try {
     const sheet = await getSheet('Menu', ['name', 'price', 'ingredients', 'date']);
-    const rows = await sheet.getRows();
+    const rows = await sheet.getRows(); // Need fresh rows for delete
     const rowToDelete = rows.find(row => row.get('name') === name);
 
     if (rowToDelete) {
       await rowToDelete.delete();
+      invalidateCache('Menu'); // Invalidate cache
       revalidatePath('/menu');
       return { success: true, message: 'ลบเมนูเรียบร้อยแล้ว' };
     }
@@ -120,8 +122,7 @@ export async function deleteMenuItem(name: string) {
 
 export async function getMenuItems() {
   try {
-    const sheet = await getSheet('Menu', ['name', 'price', 'ingredients', 'date']);
-    const rows = await sheet.getRows();
+    const rows = await getCachedRows('Menu', ['name', 'price', 'ingredients', 'date']);
     return rows.map(row => {
       const ingredientsRaw = row.get('ingredients');
       let ingredients = [];
@@ -144,8 +145,8 @@ export async function getMenuItems() {
 
 export async function submitOrder(orderItems: { name: string, price: number, quantity: number }[]) {
   try {
-    const stockItems = await getStockItems();
-    const menuItems = await getMenuItems();
+    const stockItems = await getStockItems(); // Uses cache
+    const menuItems = await getMenuItems(); // Uses cache
 
     let totalCost = 0;
     let totalPrice = 0;
@@ -182,6 +183,7 @@ export async function submitOrder(orderItems: { name: string, price: number, qua
       date: new Date().toISOString(),
     });
 
+    invalidateCache('Orders'); // Invalidate cache
     revalidatePath('/dashboard');
     return { success: true, message: 'บันทึกออเดอร์เรียบร้อยแล้ว!' };
   } catch (error) {
@@ -197,36 +199,40 @@ export async function getDashboardStats(
   endDate?: string
 ) {
   try {
-    const sheet = await getSheet('Orders', ['items', 'totalPrice', 'totalCost', 'date']);
-    const rows = await sheet.getRows();
+    // Use Cached Rows
+    const rows = await getCachedRows('Orders', ['items', 'totalPrice', 'totalCost', 'date']);
+    const stockRows = await getCachedRows('Stock', ['name', 'quantity', 'price', 'user', 'date']);
 
     let totalSales = 0;
-    let totalCost = 0;
+    let totalCost = 0; // Cost of goods sold (ingredients used)
+    let totalStockExpenditure = 0; // Money spent on buying stock
     const itemSales: Record<string, { quantity: number, sales: number }> = {};
     const orders: any[] = [];
 
-    rows.forEach(row => {
-      const rowDate = new Date(row.get('date'));
-      let include = true;
-
+    // Helper to check if a date matches the filter
+    const isDateInFilter = (dateStr: string) => {
+      const rowDate = new Date(dateStr);
       if (filterType === 'day' && dateValue) {
         const rowDateStr = rowDate.toISOString().split('T')[0];
-        if (rowDateStr !== dateValue) include = false;
+        return rowDateStr === dateValue;
       } else if (filterType === 'month' && dateValue) {
         const rowMonthStr = rowDate.toISOString().slice(0, 7);
-        if (rowMonthStr !== dateValue) include = false;
+        return rowMonthStr === dateValue;
       } else if (filterType === 'year' && dateValue) {
         const rowYearStr = rowDate.getFullYear().toString();
-        if (rowYearStr !== dateValue) include = false;
+        return rowYearStr === dateValue;
       } else if (filterType === 'custom' && startDate && endDate) {
         const start = new Date(startDate);
         const end = new Date(endDate);
-        // Set end date to end of day
         end.setHours(23, 59, 59, 999);
-        if (rowDate < start || rowDate > end) include = false;
+        return rowDate >= start && rowDate <= end;
       }
+      return true; // 'all'
+    };
 
-      if (include) {
+    // Process Orders
+    rows.forEach(row => {
+      if (isDateInFilter(row.get('date'))) {
         totalSales += Number(row.get('totalPrice'));
         totalCost += Number(row.get('totalCost'));
 
@@ -238,9 +244,8 @@ export async function getDashboardStats(
           console.warn('Failed to parse order items:', itemsRaw);
         }
 
-        // Add to orders list
         orders.push({
-          date: rowDate.toISOString(),
+          date: row.get('date'),
           items,
           totalPrice: Number(row.get('totalPrice')),
         });
@@ -255,18 +260,34 @@ export async function getDashboardStats(
       }
     });
 
-    // Sort orders by date desc
+    // Process Stock Expenditure
+    stockRows.forEach(row => {
+      if (isDateInFilter(row.get('date'))) {
+        totalStockExpenditure += Number(row.get('price'));
+      }
+    });
+
     orders.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return {
       totalSales,
-      totalCost,
-      profit: totalSales - totalCost,
+      totalCost, // COGS
+      grossProfit: totalSales - totalCost,
+      totalStockExpenditure,
+      netProfit: totalSales - totalStockExpenditure,
       itemSales,
       orders,
     };
   } catch (error) {
     console.error('Failed to fetch dashboard stats:', error);
-    return { totalSales: 0, totalCost: 0, profit: 0, itemSales: {}, orders: [] };
+    return {
+      totalSales: 0,
+      totalCost: 0,
+      grossProfit: 0,
+      totalStockExpenditure: 0,
+      netProfit: 0,
+      itemSales: {},
+      orders: []
+    };
   }
 }

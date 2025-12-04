@@ -15,8 +15,21 @@ const serviceAccountAuth = new JWT({
 
 export const doc = new GoogleSpreadsheet(process.env.GOOGLE_SPREADSHEET_ID, serviceAccountAuth);
 
+let cachedDoc: GoogleSpreadsheet | null = null;
+let cachedAt = 0;
+const CACHE_TTL = 60000; // 60 seconds
+
 export async function loadDoc() {
+  const now = Date.now();
+
+  if (cachedDoc && (now - cachedAt < CACHE_TTL)) {
+    return cachedDoc;
+  }
+
   await doc.loadInfo();
+  cachedDoc = doc;
+  cachedAt = now;
+
   return doc;
 }
 
@@ -27,4 +40,31 @@ export async function getSheet(title: string, headerValues: string[]) {
     sheet = await doc.addSheet({ title, headerValues });
   }
   return sheet;
+}
+
+// Row Caching
+let rowsCache: Record<string, { rows: any[], timestamp: number }> = {};
+const DATA_CACHE_TTL = 30000; // 30 seconds
+
+export async function getCachedRows(title: string, headerValues: string[]) {
+  const now = Date.now();
+  if (rowsCache[title] && (now - rowsCache[title].timestamp < DATA_CACHE_TTL)) {
+    return rowsCache[title].rows;
+  }
+
+  const sheet = await getSheet(title, headerValues);
+  const rows = await sheet.getRows();
+
+  rowsCache[title] = {
+    rows: rows,
+    timestamp: now
+  };
+
+  return rows;
+}
+
+export function invalidateCache(title: string) {
+  if (rowsCache[title]) {
+    delete rowsCache[title];
+  }
 }
