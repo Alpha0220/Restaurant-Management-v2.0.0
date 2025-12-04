@@ -3,6 +3,37 @@
 import { getSheet, getCachedRows, invalidateCache } from '@/lib/googleSheets';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+
+// ... (existing imports)
+
+export async function login(prevState: any, formData: FormData) {
+  const username = formData.get('username') as string;
+  const password = formData.get('password') as string;
+
+  if (
+    username === process.env.ADMIN_USERNAME &&
+    password === process.env.ADMIN_PASSWORD
+  ) {
+    (await cookies()).set('auth_session', 'true', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7, // 1 week
+      path: '/',
+    });
+    redirect('/dashboard');
+  } else {
+    return { message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' };
+  }
+}
+
+export async function logout() {
+  (await cookies()).delete('auth_session');
+  redirect('/login');
+}
+
+// ... (rest of the file)
 
 const stockSchema = z.object({
   name: z.string().min(1, 'ชื่อสินค้าจำเป็นต้องระบุ'),
