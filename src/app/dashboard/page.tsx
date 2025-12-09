@@ -2,8 +2,19 @@
 
 import { getDashboardStats } from '@/app/actions';
 import { useEffect, useState } from 'react';
-
 import Loading from '@/components/Loading';
+import {
+  LayoutDashboard,
+  Calendar,
+  DollarSign,
+  TrendingUp,
+  Wallet,
+  Package,
+  ArrowUpRight,
+  ArrowDownRight,
+  ShoppingBag,
+  ChefHat
+} from 'lucide-react';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<any>({
@@ -22,7 +33,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Set default date value based on filter type
+    // Set default date value
     const now = new Date();
     if (filterType === 'day') {
       setDateValue(now.toISOString().split('T')[0]);
@@ -43,176 +54,253 @@ export default function DashboardPage() {
     });
   }, [filterType, dateValue, startDate, endDate]);
 
+  const FilterButton = ({ type, label }: { type: any, label: string }) => (
+    <button
+      onClick={() => setFilterType(type)}
+      className={`flex-1 min-w-[80px] py-2 text-sm font-medium rounded-lg transition-colors ${filterType === type
+        ? 'bg-blue-600 text-white shadow-sm'
+        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+        }`}
+    >
+      {label}
+    </button>
+  );
+
   return (
-    <div className="p-4 bg-gray-100 min-h-screen pb-20 md:pb-4 relative">
-      {/* Overlay Loading */}
+    <div className="min-h-screen bg-gray-50 pb-24 md:pb-8 relative">
+      {/* Loading Overlay */}
       {isLoading && (
-        <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center min-h-screen">
+        <div className="absolute inset-0 bg-white/50 z-20 flex items-center justify-center backdrop-blur-sm min-h-screen">
           <Loading />
         </div>
       )}
 
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">ภาพรวมร้านค้า</h1>
+      <div className="max-w-7xl mx-auto p-4 space-y-6">
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-center">
-        <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-          <button
-            onClick={() => setFilterType('all')}
-            className={`px-2 py-2 text-sm whitespace-nowrap ${filterType === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-          >
-            ทั้งหมด
-          </button>
-          <button
-            onClick={() => setFilterType('day')}
-            className={`px-2 py-2  text-sm whitespace-nowrap ${filterType === 'day' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-          >
-            รายวัน
-          </button>
-          <button
-            onClick={() => setFilterType('month')}
-            className={`px-2 py-2  text-sm whitespace-nowrap ${filterType === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-          >
-            รายเดือน
-          </button>
-          <button
-            onClick={() => setFilterType('year')}
-            className={`px-2 py-2  text-sm whitespace-nowrap ${filterType === 'year' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-          >
-            รายปี
-          </button>
-          <button
-            onClick={() => setFilterType('custom')}
-            className={`px-2 py-2  text-sm whitespace-nowrap ${filterType === 'custom' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-          >
-            กำหนดเอง
-          </button>
+        {/* Header */}
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="p-3 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
+            <LayoutDashboard className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
+            <p className="text-gray-500 text-sm">สรุปผลการดำเนินงานของร้าน</p>
+          </div>
         </div>
 
-        {filterType !== 'all' && filterType !== 'custom' && (
-          <input
-            type={filterType === 'day' ? 'date' : filterType === 'month' ? 'month' : 'number'}
-            value={dateValue}
-            onChange={(e) => setDateValue(e.target.value)}
-            className="border rounded-md px-3 py-2 w-full md:w-auto"
-            placeholder={filterType === 'year' ? 'YYYY' : ''}
-          />
-        )}
+        {/* Filters Panel */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <div className="flex items-center mb-3 text-sm font-medium text-gray-700">
+            <Calendar className="w-4 h-4 mr-2 text-blue-500" />
+            ตัวกรองวันที่
+          </div>
 
-        {filterType === 'custom' && (
-          <div className="flex flex-col md:flex-row gap-2 items-start md:items-center w-full md:w-auto mt-2 md:mt-0">
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <span className="text-sm text-gray-600 whitespace-nowrap md:hidden">เริ่ม:</span>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="border rounded-md px-3 py-2 w-full md:w-auto text-sm"
-              />
+          <div className="space-y-4">
+            {/* Filter Buttons Scrollable on mobile */}
+            <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+              {/* <FilterButton type="all" label="ทั้งหมด" /> */}
+              <FilterButton type="day" label="รายวัน" />
+              <FilterButton type="month" label="รายเดือน" />
+              {/* <FilterButton type="year" label="รายปี" /> */}
+              <FilterButton type="custom" label="กำหนดเอง" />
             </div>
-            <span className="hidden md:inline">ถึง</span>
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <span className="text-sm text-gray-600 whitespace-nowrap md:hidden">ถึง:</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="border rounded-md px-3 py-2 w-full md:w-auto text-sm"
-              />
+
+            {/* Date Inputs */}
+            {(filterType !== 'all') && (
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 animate-fade-in">
+                {filterType !== 'custom' ? (
+                  <input
+                    type={filterType === 'day' ? 'date' : filterType === 'month' ? 'month' : 'number'}
+                    value={dateValue}
+                    onChange={(e) => setDateValue(e.target.value)}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder={filterType === 'year' ? 'Ex: 2024' : ''}
+                  />
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">วันที่เริ่มต้น</label>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">วันที่สิ้นสุด</label>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Key Metrics Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Sales */}
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-blue-100 relative overflow-hidden group">
+            <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <DollarSign className="w-16 h-16 text-blue-600" />
+            </div>
+            <div className="relative z-10">
+              <p className="text-sm font-medium text-blue-600 mb-1 flex items-center">
+                ยอดขายรวม <ArrowUpRight className="w-3 h-3 ml-1" />
+              </p>
+              <h3 className="text-2xl font-bold text-gray-800">฿{stats.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Section 1: Sales Performance */}
-      <h2 className="text-lg font-semibold text-gray-700 mb-3">ผลประกอบการจากการขาย (Sales Performance)</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
-          <h3 className="text-gray-500 text-sm font-medium uppercase">ยอดขายรวม</h3>
-          <p className="text-2xl font-bold text-gray-800">฿{stats.totalSales.toFixed(2)}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
-          <h3 className="text-gray-500 text-sm font-medium uppercase">ต้นทุนขาย (COGS)</h3>
-          <p className="text-2xl font-bold text-gray-800">฿{stats.totalCost.toFixed(2)}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
-          <h3 className="text-gray-500 text-sm font-medium uppercase">กำไรขั้นต้น</h3>
-          <p className="text-2xl font-bold text-gray-800">฿{stats.grossProfit.toFixed(2)}</p>
-        </div>
-      </div>
-
-      {/* Section 2: Cash Flow */}
-      <h2 className="text-lg font-semibold text-gray-700 mb-3">กระแสเงินสดสุทธิ (Cash Flow)</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-orange-500">
-          <h3 className="text-gray-500 text-sm font-medium uppercase">ต้นทุนซื้อวัตถุดิบ</h3>
-          <p className="text-2xl font-bold text-gray-800">฿{stats.totalStockExpenditure.toFixed(2)}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
-          <h3 className="text-gray-500 text-sm font-medium uppercase">กำไรสุทธิ</h3>
-          <p className="text-2xl font-bold text-gray-800">฿{stats.netProfit.toFixed(2)}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Item Report */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="px-6 py-4 border-b bg-gray-50">
-            <h3 className="text-lg font-semibold text-gray-800">ยอดขายแยกตามเมนู</h3>
+          {/* Gross Profit */}
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-green-100 relative overflow-hidden group">
+            <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <TrendingUp className="w-16 h-16 text-green-600" />
+            </div>
+            <div className="relative z-10">
+              <p className="text-sm font-medium text-green-600 mb-1 flex items-center">
+                กำไรขั้นต้น
+              </p>
+              <h3 className="text-2xl font-bold text-gray-800">฿{stats.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+              <p className="text-xs text-green-500 mt-1">ยอดขาย - ต้นทุนสินค้า (COGS)</p>
+            </div>
           </div>
-          <div className="overflow-x-auto max-h-96">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อเมนู</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จำนวน</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ยอดขาย</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {Object.entries(stats.itemSales).map(([name, data]: [string, any]) => (
-                  <tr key={name}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{data.quantity}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">฿{data.sales.toFixed(2)}</td>
+
+          {/* COGS */}
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-red-100 relative overflow-hidden group">
+            <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <ShoppingBag className="w-16 h-16 text-red-600" />
+            </div>
+            <div className="relative z-10">
+              <p className="text-sm font-medium text-red-600 mb-1 flex items-center">
+                ต้นทุนสินค้า (COGS)
+              </p>
+              <h3 className="text-2xl font-bold text-gray-800">฿{stats.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+              <p className="text-xs text-red-400 mt-1">Cost of Goods Sold</p>
+            </div>
+          </div>
+
+          {/* Net Profit */}
+          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-5 rounded-2xl shadow-lg text-white relative overflow-hidden">
+            <div className="absolute right-0 top-0 p-4 opacity-20">
+              <Wallet className="w-16 h-16 text-white" />
+            </div>
+            <div className="relative z-10">
+              <p className="text-sm font-medium text-emerald-100 mb-1 flex items-center">
+                กำไรสุทธิ (Cash Flow)
+              </p>
+              <h3 className="text-3xl font-bold">฿{stats.netProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+              <p className="text-xs text-emerald-100 mt-2 opacity-80">
+                ยอดขาย - รายจ่ายซื้อของเข้าร้าน (฿{stats.totalStockExpenditure.toLocaleString()})
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Detailed Reports Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          {/* Top Products */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <h3 className="font-semibold text-gray-800 flex items-center">
+                <ChefHat className="w-5 h-5 mr-2 text-orange-500" />
+                เมนูขายดี
+              </h3>
+            </div>
+            <div className="p-0">
+              {Object.keys(stats.itemSales).length === 0 ? (
+                <div className="p-8 text-center text-gray-400">ไม่มีข้อมูลการขาย</div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {Object.entries(stats.itemSales)
+                    .sort(([, a]: [string, any], [, b]: [string, any]) => b.sales - a.sales) // Sort by sales value
+                    .map(([name, data]: [string, any], index) => (
+                      <div key={name} className="px-5 py-3 hover:bg-gray-50 flex items-center justify-between group transition-colors">
+                        <div className="flex items-center space-x-3">
+                          <span className={`
+                          flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold
+                          ${index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                              index === 1 ? 'bg-gray-100 text-gray-700' :
+                                index === 2 ? 'bg-orange-100 text-orange-700' : 'bg-transparent text-gray-400'}
+                        `}>
+                            {index + 1}
+                          </span>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">{name}</p>
+                            <p className="text-xs text-gray-500">ขายแล้ว {data.quantity}</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-bold text-gray-900">
+                          ฿{data.sales.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Orders */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <h3 className="font-semibold text-gray-800 flex items-center">
+                <Package className="w-5 h-5 mr-2 text-blue-500" />
+                ประวัติการขายล่าสุด
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-gray-50 text-gray-500 font-medium">
+                  <tr>
+                    <th className="px-5 py-3 w-32">เวลา</th>
+                    <th className="px-5 py-3">รายการ</th>
+                    <th className="px-5 py-3 text-right">ยอดรวม</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {stats.orders && stats.orders.length > 0 ? (
+                    stats.orders.slice(0, 10).map((order: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
+                          <div className="font-medium text-gray-700">
+                            {new Date(order.date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit' })}
+                          </div>
+                          <div className="text-xs">
+                            {new Date(order.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="text-gray-700 max-w-[150px] md:max-w-xs truncate">
+                            {order.items.map((i: any) => `${i.name} (${i.quantity})`).join(', ')}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-right font-bold text-gray-900">
+                          ฿{order.totalPrice.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className="p-8 text-center text-gray-400">ไม่มีคำสั่งซื้อล่าสุด</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {stats.orders && stats.orders.length > 10 && (
+              <div className="p-3 bg-gray-50 text-center border-t border-gray-100">
+                <span className="text-xs text-gray-500">แสดง 10 รายการล่าสุด</span>
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* Sales History */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="px-6 py-4 border-b bg-gray-50">
-            <h3 className="text-lg font-semibold text-gray-800">ประวัติการขาย</h3>
-          </div>
-          <div className="overflow-x-auto max-h-96">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วันที่</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">รายการ</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ยอดรวม</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {stats.orders && stats.orders.map((order: any, index: number) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(order.date).toLocaleDateString('th-TH')}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {order.items.map((item: any) => `${item.name} x${item.quantity}`).join(', ')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      ฿{order.totalPrice.toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       </div>
     </div>

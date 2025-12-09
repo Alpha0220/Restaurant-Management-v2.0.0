@@ -6,10 +6,10 @@ import { LayoutDashboard, UtensilsCrossed, Package, Store, LogOut } from 'lucide
 import { logout } from '@/app/actions';
 
 const navItems = [
-  { href: '/dashboard', label: 'ภาพรวม', icon: LayoutDashboard },
-  { href: '/menu', label: 'จัดการเมนู', icon: UtensilsCrossed },
-  { href: '/stock', label: 'คลังวัตถุดิบ', icon: Package },
-  { href: '/pos', label: 'ขายหน้าร้าน', icon: Store },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/menu', label: 'Menu', icon: UtensilsCrossed },
+  { href: '/stock', label: 'Stock', icon: Package },
+  { href: '/pos', label: 'POS', icon: Store },
 ];
 
 export default function Navigation() {
@@ -31,8 +31,8 @@ export default function Navigation() {
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                   }`}
               >
                 <Icon size={20} />
@@ -48,7 +48,7 @@ export default function Navigation() {
               className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-gray-800 w-full transition-colors"
             >
               <LogOut size={20} />
-              <span className="font-medium">ออกจากระบบ</span>
+              <span className="font-medium">Logout</span>
             </button>
           </form>
         </div>
@@ -78,7 +78,7 @@ export default function Navigation() {
               className="flex flex-col items-center justify-center w-full h-full space-y-1 text-red-500"
             >
               <LogOut size={24} />
-              <span className="text-xs font-medium">ออก</span>
+              <span className="text-xs font-medium">Logout</span>
             </button>
           </form>
         </nav>
