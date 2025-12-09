@@ -122,7 +122,7 @@ export default function POSPage() {
                     <button onClick={() => updateQuantity(item.name, -1)} className="p-1 bg-gray-100 rounded-full hover:bg-gray-200">
                       <Minus className="w-4 h-4 text-gray-600" />
                     </button>
-                    <span className="font-medium w-4 text-center">{item.quantity}</span>
+                    <span className="font-medium w-4 text-center text-gray-600">{item.quantity}</span>
                     <button onClick={() => updateQuantity(item.name, 1)} className="p-1 bg-gray-100 rounded-full hover:bg-gray-200">
                       <Plus className="w-4 h-4 text-gray-600" />
                     </button>

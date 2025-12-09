@@ -158,7 +158,7 @@ export default function StockPage() {
                   value={nameInput}
                   onChange={handleNameChange}
                   autoComplete="off"
-                  className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border text-sm"
+                  className="w-full rounded-lg border-gray-300 text-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border text-sm"
                   placeholder="พิมพ์ชื่อ..."
                 />
                 {suggestions.length > 0 && (
@@ -179,7 +179,7 @@ export default function StockPage() {
                   onChange={(e) => setQuantityInput(e.target.value)}
                   min="0.1"
                   step="0.1"
-                  className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border text-sm"
+                  className="w-full rounded-lg border-gray-300 text-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border text-sm"
                   placeholder="0.0"
                 />
               </div>
@@ -192,7 +192,7 @@ export default function StockPage() {
                   onKeyDown={handlePriceKeyDown}
                   min="0"
                   step="0.01"
-                  className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border text-sm"
+                  className="w-full rounded-lg border-gray-300 text-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border text-sm"
                   placeholder="0.00"
                 />
               </div>
