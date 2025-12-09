@@ -78,16 +78,80 @@ export async function addStockItem(prevState: any, formData: FormData) {
   }
 }
 
+
+const bulkStockSchema = z.object({
+  items: z.string().transform((str, ctx) => {
+    try {
+      const parsed = JSON.parse(str);
+      if (!Array.isArray(parsed)) throw new Error('Must be an array');
+      return parsed;
+    } catch (e) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid JSON' });
+      return z.NEVER;
+    }
+  }).pipe(z.array(stockSchema)),
+});
+
+export async function addMultipleStockItems(prevState: any, formData: FormData) {
+  const validatedFields = bulkStockSchema.safeParse({
+    items: formData.get('items'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'ข้อมูลไม่ถูกต้อง',
+    };
+  }
+
+  const { items } = validatedFields.data;
+
+  try {
+    const sheet = await getSheet('Stock', ['name', 'quantity', 'price', 'user', 'date']);
+    const date = new Date().toISOString();
+
+    // Add all rows
+    await sheet.addRows(items.map(item => ({
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      user: item.user,
+      date,
+    })));
+
+    invalidateCache('Stock');
+    revalidatePath('/stock');
+    return { success: true, message: 'บันทึกรายการสต็อกทั้งหมดเรียบร้อยแล้ว!' };
+  } catch (error) {
+    console.error('Database Error:', error);
+    return { message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' };
+  }
+}
+
 export async function getStockItems() {
   try {
     const rows = await getCachedRows('Stock', ['name', 'quantity', 'price', 'user', 'date']);
+    // Sort by date desc
     return rows.map(row => ({
       name: row.get('name'),
-      quantity: row.get('quantity'),
-      price: row.get('price'),
-    }));
+      quantity: Number(row.get('quantity')),
+      price: Number(row.get('price')),
+      date: row.get('date'),
+      user: row.get('user'),
+    })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch (error) {
     console.error('Failed to fetch stock items:', error);
+    return [];
+  }
+}
+
+export async function getStockNames() {
+  try {
+    const rows = await getCachedRows('Stock', ['name']);
+    const names = new Set(rows.map(row => row.get('name')));
+    return Array.from(names).filter(Boolean).sort();
+  } catch (error) {
+    console.error('Failed to fetch stock names:', error);
     return [];
   }
 }
@@ -129,6 +193,56 @@ export async function addMenuItem(prevState: any, formData: FormData) {
   } catch (error) {
     console.error('Database Error:', error);
     return { message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' };
+  }
+}
+
+export async function updateMenuItem(prevState: any, formData: FormData) {
+  const originalName = formData.get('originalName') as string;
+  const validatedFields = menuSchema.safeParse({
+    name: formData.get('name'),
+    price: formData.get('price'),
+    ingredients: formData.get('ingredients'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'ข้อมูลไม่ครบถ้วน ไม่สามารถแก้ไขเมนูได้',
+    };
+  }
+
+  const { name, price, ingredients } = validatedFields.data;
+
+  try {
+    const sheet = await getSheet('Menu', ['name', 'price', 'ingredients', 'date']);
+    const rows = await sheet.getRows();
+    const rowToUpdate = rows.find(row => row.get('name') === originalName);
+
+    if (rowToUpdate) {
+      rowToUpdate.set('name', name);
+      rowToUpdate.set('price', String(price));
+      rowToUpdate.set('ingredients', ingredients);
+      // Optional: Update date? rowToUpdate.set('date', new Date().toISOString());
+
+      await rowToUpdate.save();
+
+      invalidateCache('Menu');
+      revalidatePath('/menu');
+      return { success: true, message: 'แก้ไขเมนูเรียบร้อยแล้ว!' };
+    }
+
+    return { success: false, message: 'ไม่พบเมนูที่ต้องการแก้ไข' };
+  } catch (error) {
+    console.error('Update Error:', error);
+    return { success: false, message: 'เกิดข้อผิดพลาดในการแก้ไข' };
+  }
+}
+
+export async function saveMenuItem(prevState: any, formData: FormData) {
+  if (formData.get('originalName')) {
+    return updateMenuItem(prevState, formData);
+  } else {
+    return addMenuItem(prevState, formData);
   }
 }
 

@@ -1,9 +1,9 @@
 'use client';
 
 import { useActionState } from 'react';
-import { addMenuItem, getStockItems, getMenuItems, deleteMenuItem } from '@/app/actions';
+import { saveMenuItem, getStockItems, getMenuItems, deleteMenuItem } from '@/app/actions';
 import { useEffect, useState } from 'react';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, Pencil } from 'lucide-react';
 
 const initialState = {
   message: '',
@@ -12,19 +12,38 @@ const initialState = {
 
 export default function MenuPage() {
   // @ts-ignore
-  const [state, dispatch] = useActionState(addMenuItem, initialState);
+  const [state, dispatch] = useActionState(saveMenuItem, initialState);
   const [stockItems, setStockItems] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [selectedIngredients, setSelectedIngredients] = useState<{ name: string, qty: number }[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
 
   useEffect(() => {
-    getStockItems().then(setStockItems);
+    getStockItems().then((items) => {
+      // Aggregate items by name to avoid duplicates and sum quantities
+      const aggregated = items.reduce((acc: any, item: any) => {
+        if (!acc[item.name]) {
+          acc[item.name] = { ...item, quantity: 0 };
+        }
+        acc[item.name].quantity += item.quantity;
+        return acc;
+      }, {});
+      setStockItems(Object.values(aggregated));
+    });
     loadMenu();
   }, [state]); // Reload menu when state changes (after add)
 
   const loadMenu = () => {
     getMenuItems().then(setMenuItems);
+  };
+
+  const handleEdit = (item: any) => {
+    setEditingItem(item);
+    setSelectedIngredients(item.ingredients || []);
+    setIsFormOpen(true);
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (name: string) => {
@@ -55,7 +74,11 @@ export default function MenuPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">จัดการเมนู</h1>
         <button
-          onClick={() => setIsFormOpen(!isFormOpen)}
+          onClick={() => {
+            setEditingItem(null);
+            setSelectedIngredients([{ name: '', qty: 0 }]);
+            setIsFormOpen(!isFormOpen);
+          }}
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus className="w-5 h-5 mr-1" />
@@ -66,8 +89,11 @@ export default function MenuPage() {
       {/* Add Menu Form */}
       {isFormOpen && (
         <div className="bg-white p-6 rounded-lg shadow-md mb-8 animate-fade-in">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">เพิ่มเมนูใหม่</h2>
-          <form action={dispatch} className="space-y-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-700">
+            {editingItem ? 'แก้ไขเมนู' : 'เพิ่มเมนูใหม่'}
+          </h2>
+          <form key={editingItem?.name || 'new'} action={dispatch} className="space-y-6">
+            {editingItem && <input type="hidden" name="originalName" value={editingItem.name} />}
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">ชื่อเมนู</label>
               <input
@@ -75,6 +101,7 @@ export default function MenuPage() {
                 id="name"
                 name="name"
                 required
+                defaultValue={editingItem?.name || ''}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
                 placeholder="เช่น ข้าวกะเพราไก่"
               />
@@ -93,7 +120,8 @@ export default function MenuPage() {
                   >
                     <option value="">เลือกวัตถุดิบ</option>
                     {stockItems.map((item) => (
-                      <option key={item.name} value={item.name}>{item.name} (คงเหลือ: {item.quantity})</option>
+                      <option key={item.name} value={item.name}>{item.name}</option>
+                      // <option key={item.name} value={item.name}>{item.name} (คงเหลือ: {item.quantity})</option>
                     ))}
                   </select>
                   <input
@@ -133,6 +161,7 @@ export default function MenuPage() {
                 required
                 min="0"
                 step="0.01"
+                defaultValue={editingItem?.price || ''}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
                 placeholder="0.00"
               />
@@ -143,7 +172,7 @@ export default function MenuPage() {
               type="submit"
               className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              บันทึกเมนู
+              {editingItem ? 'บันทึกการแก้ไข' : 'บันทึกเมนู'}
             </button>
 
             {state?.message && (
@@ -173,13 +202,22 @@ export default function MenuPage() {
                     วัตถุดิบ: {item.ingredients.map((ing: any) => `${ing.name} (${ing.qty}g)`).join(', ')}
                   </p>
                 </div>
-                <button
-                  onClick={() => handleDelete(item.name)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                  title="ลบเมนู"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(item)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                    title="แก้ไขเมนู"
+                  >
+                    <Pencil className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.name)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                    title="ลบเมนู"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             ))
           )}
