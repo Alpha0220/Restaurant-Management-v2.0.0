@@ -2,25 +2,40 @@
 
 import { getMenuItems, submitOrder } from '@/app/actions';
 import { useEffect, useState } from 'react';
-import { ShoppingCart, Plus, Minus, X } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, X, Loader2 } from 'lucide-react';
 
 export default function POSPage() {
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [cart, setCart] = useState<{ name: string, price: number, quantity: number }[]>([]);
   const [message, setMessage] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false); // For mobile cart toggle
+  const [isLoading, setIsLoading] = useState(false);
+
+  // New state for Quantity Input Modal
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
+  const [quantityInput, setQuantityInput] = useState<number>(1);
 
   useEffect(() => {
     getMenuItems().then(setMenuItems);
   }, []);
 
-  const addToCart = (item: any) => {
-    const existing = cart.find(c => c.name === item.name);
+  const handleItemClick = (item: any) => {
+    setSelectedItem(item);
+    setQuantityInput(1);
+  };
+
+  const confirmAddToCart = () => {
+    if (!selectedItem || quantityInput < 1) return;
+
+    const existing = cart.find(c => c.name === selectedItem.name);
     if (existing) {
-      setCart(cart.map(c => c.name === item.name ? { ...c, quantity: c.quantity + 1 } : c));
+      setCart(cart.map(c => c.name === selectedItem.name ? { ...c, quantity: c.quantity + quantityInput } : c));
     } else {
-      setCart([...cart, { name: item.name, price: item.price, quantity: 1 }]);
+      setCart([...cart, { name: selectedItem.name, price: selectedItem.price, quantity: quantityInput }]);
     }
+
+    setSelectedItem(null);
+    setQuantityInput(1);
     setMessage('');
   };
 
@@ -39,11 +54,18 @@ export default function POSPage() {
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
-    const result = await submitOrder(cart);
-    setMessage(result.message);
-    if (result.success) {
-      setCart([]);
-      setIsCartOpen(false);
+    setIsLoading(true);
+    try {
+      const result = await submitOrder(cart);
+      setMessage(result.message);
+      if (result.success) {
+        setCart([]);
+        setIsCartOpen(false);
+      }
+    } catch (error) {
+      setMessage('เกิดข้อผิดพลาด');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -51,7 +73,7 @@ export default function POSPage() {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-gray-100 pb-16 md:pb-0 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-gray-100 pb-16 md:pb-0 overflow-hidden relative">
       {/* Menu Section */}
       <div className="flex-1 p-4 overflow-y-auto">
         <h1 className="text-2xl font-bold mb-4 text-gray-800">เลือกเมนู</h1>
@@ -59,7 +81,7 @@ export default function POSPage() {
           {menuItems.map((item, index) => (
             <div
               key={`${item.name}-${index}`}
-              onClick={() => addToCart(item)}
+              onClick={() => handleItemClick(item)}
               className="bg-white p-3 rounded-lg shadow cursor-pointer hover:shadow-lg transition-shadow flex flex-col justify-between h-32"
             >
               <h3 className="font-bold text-gray-800 line-clamp-2">{item.name}</h3>
@@ -73,6 +95,68 @@ export default function POSPage() {
           ))}
         </div>
       </div>
+
+      {/* Quantity Input Modal */}
+      {selectedItem && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-gray-900">{selectedItem.name}</h3>
+              <button onClick={() => setSelectedItem(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 flex flex-col items-center gap-6">
+              <div className="text-center">
+                <p className="text-gray-500 mb-2">ระบุจำนวนที่ต้องการ</p>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setQuantityInput(Math.max(1, quantityInput - 1))}
+                    className="p-3 bg-gray-100 rounded-xl hover:bg-gray-200 active:scale-95 transition-all"
+                  >
+                    <Minus className="w-6 h-6 text-gray-700" />
+                  </button>
+
+                  <input
+                    type="number"
+                    min="1"
+                    value={quantityInput}
+                    onChange={(e) => setQuantityInput(Math.max(1, parseInt(e.target.value) || 0))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') confirmAddToCart();
+                    }}
+                    autoFocus
+                    className="w-24 text-center text-3xl font-bold border-b-2 border-blue-500 focus:outline-none py-2"
+                  />
+
+                  <button
+                    onClick={() => setQuantityInput(quantityInput + 1)}
+                    className="p-3 bg-gray-100 rounded-xl hover:bg-gray-200 active:scale-95 transition-all"
+                  >
+                    <Plus className="w-6 h-6 text-gray-700" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="w-full flex gap-3">
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="flex-1 py-3 text-gray-600 font-bold bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={confirmAddToCart}
+                  className="flex-2 w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
+                >
+                  ยืนยัน ({quantityInput})
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Cart Toggle Button */}
       {cart.length > 0 && (
@@ -142,10 +226,11 @@ export default function POSPage() {
             </div>
             <button
               onClick={handleCheckout}
-              disabled={cart.length === 0}
-              className="w-full py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-md"
+              disabled={cart.length === 0 || isLoading}
+              className="w-full py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-md flex justify-center items-center gap-2"
             >
-              ชำระเงิน
+              {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
+              {isLoading ? 'กำลังบันทึก...' : 'ชำระเงิน'}
             </button>
             {message && (
               <p className={`text-center mt-2 text-sm ${message.includes('สำเร็จ') ? 'text-green-600' : 'text-red-600'}`}>
