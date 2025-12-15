@@ -1,12 +1,21 @@
-
 'use client';
 
-import { useActionState, useEffect, useState, useTransition, useRef } from 'react';
+import { useEffect, useState, useTransition, useRef, useCallback } from 'react';
 import { addMultipleStockItems, getStockItems, getStockNames } from '@/app/actions';
-import { Plus, Clock, User as UserIcon, Trash2, Save, X, ShoppingCart, ChevronRight } from 'lucide-react';
+import { Plus, Clock, Save, X, ShoppingCart } from 'lucide-react';
+
+interface StockItem {
+  _id?: string;
+  tempId?: number;
+  name: string;
+  quantity: number;
+  price: number;
+  user: string;
+  date?: string;
+}
 
 export default function StockPage() {
-  const [stockItems, setStockItems] = useState<any[]>([]);
+  const [stockItems, setStockItems] = useState<StockItem[]>([]);
   const [stockNames, setStockNames] = useState<string[]>([]);
   const [currentUser, setCurrentUser] = useState('');
 
@@ -20,11 +29,22 @@ export default function StockPage() {
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Pending Items for Bulk Add
-  const [pendingItems, setPendingItems] = useState<any[]>([]);
+  const [pendingItems, setPendingItems] = useState<StockItem[]>([]);
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
 
+  const loadStockIds = useCallback(async () => {
+    const allItems = await getStockItems();
+    const today = new Date().toISOString().split('T')[0];
+    const todaysItems = allItems.filter((item: StockItem) => {
+      if (!item.date) return false;
+      return item.date.startsWith(today);
+    });
+    setStockItems(todaysItems);
+  }, []);
+
   useEffect(() => {
+    // eslint-disable-next-line
     loadStockIds();
     getStockNames().then(setStockNames);
 
@@ -37,17 +57,7 @@ export default function StockPage() {
         console.error('Error parsing user', e);
       }
     }
-  }, []);
-
-  const loadStockIds = async () => {
-    const allItems = await getStockItems();
-    const today = new Date().toISOString().split('T')[0];
-    const todaysItems = allItems.filter((item: any) => {
-      if (!item.date) return false;
-      return item.date.startsWith(today);
-    });
-    setStockItems(todaysItems);
-  };
+  }, [loadStockIds]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -75,7 +85,7 @@ export default function StockPage() {
       return;
     }
 
-    const newItem = {
+    const newItem: StockItem = {
       name: nameInput,
       quantity: Number(quantityInput),
       price: Number(priceInput),
@@ -101,6 +111,7 @@ export default function StockPage() {
     if (pendingItems.length === 0) return;
 
     startTransition(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const itemsPayload = JSON.stringify(pendingItems.map(({ tempId, ...rest }) => rest));
 
       const formData = new FormData();
@@ -242,7 +253,7 @@ export default function StockPage() {
                         <td className="px-6 py-3 text-sm text-gray-600">{item.quantity}</td>
                         <td className="px-6 py-3 text-sm text-gray-900 font-medium">฿{item.price.toLocaleString()}</td>
                         <td className="px-6 py-3 text-right">
-                          <button onClick={() => removeFromPending(item.tempId)} className="text-gray-400 hover:text-red-500 transition-colors">
+                          <button onClick={() => item.tempId && removeFromPending(item.tempId)} className="text-gray-400 hover:text-red-500 transition-colors">
                             <X className="w-5 h-5" />
                           </button>
                         </td>
@@ -296,7 +307,7 @@ export default function StockPage() {
                           ปริมาณ: {item.quantity}
                         </div>
                         <div className="text-[10px] text-gray-400 flex items-center">
-                          {new Date(item.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                          {item.date && new Date(item.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
                           <span className="mx-1">•</span>
                           {item.user}
                         </div>

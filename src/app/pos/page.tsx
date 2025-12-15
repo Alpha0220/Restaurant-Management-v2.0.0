@@ -4,22 +4,27 @@ import { getMenuItems, submitOrder } from '@/app/actions';
 import { useEffect, useState } from 'react';
 import { ShoppingCart, Plus, Minus, X, Loader2 } from 'lucide-react';
 
+interface MenuItem {
+  name: string;
+  price: number;
+}
+
 export default function POSPage() {
-  const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [cart, setCart] = useState<{ name: string, price: number, quantity: number }[]>([]);
   const [message, setMessage] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false); // For mobile cart toggle
   const [isLoading, setIsLoading] = useState(false);
 
   // New state for Quantity Input Modal
-  const [selectedItem, setSelectedItem] = useState<any | null>(null);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [quantityInput, setQuantityInput] = useState<number>(1);
 
   useEffect(() => {
     getMenuItems().then(setMenuItems);
   }, []);
 
-  const handleItemClick = (item: any) => {
+  const handleItemClick = (item: MenuItem) => {
     setSelectedItem(item);
     setQuantityInput(1);
   };
@@ -62,7 +67,7 @@ export default function POSPage() {
         setCart([]);
         setIsCartOpen(false);
       }
-    } catch (error) {
+    } catch {
       setMessage('เกิดข้อผิดพลาด');
     } finally {
       setIsLoading(false);
@@ -98,7 +103,7 @@ export default function POSPage() {
 
       {/* Quantity Input Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
               <h3 className="text-lg font-bold text-gray-900">{selectedItem.name}</h3>

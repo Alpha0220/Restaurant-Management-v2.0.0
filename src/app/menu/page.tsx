@@ -1,8 +1,27 @@
 'use client';
 
-import { useActionState, useEffect, useState, useRef } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { saveMenuItem, getStockItems, getMenuItems, deleteMenuItem } from '@/app/actions';
-import { Trash2, Plus, Pencil, Save, X, Utensils, Search, AlertCircle, ChefHat } from 'lucide-react';
+import { Trash2, Plus, Pencil, X, Utensils, Search, ChefHat } from 'lucide-react';
+
+interface Ingredient {
+  name: string;
+  qty: number;
+}
+
+interface MenuItem {
+  name: string;
+  price: number;
+  ingredients?: Ingredient[];
+}
+
+interface StockItem {
+  name: string;
+  quantity: number;
+  price: number;
+  date: string;
+  user: string;
+}
 
 const initialState = {
   message: '',
@@ -10,11 +29,10 @@ const initialState = {
 };
 
 export default function MenuPage() {
-  // @ts-ignore
   const [state, dispatch] = useActionState(saveMenuItem, initialState);
-  const [stockItems, setStockItems] = useState<any[]>([]);
-  const [menuItems, setMenuItems] = useState<any[]>([]);
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [stockItems, setStockItems] = useState<StockItem[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
 
   // Form State
   const [name, setName] = useState('');
@@ -28,15 +46,10 @@ export default function MenuPage() {
   // Search
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    loadStockIds();
-    loadMenu();
-  }, [state]);
-
   const loadStockIds = async () => {
     const items = await getStockItems();
     // Aggregate items by name to avoid duplicates and sum quantities
-    const aggregated = items.reduce((acc: any, item: any) => {
+    const aggregated = items.reduce((acc: Record<string, StockItem>, item: StockItem) => {
       if (!acc[item.name]) {
         acc[item.name] = { ...item, quantity: 0 };
       }
@@ -50,7 +63,15 @@ export default function MenuPage() {
     getMenuItems().then(setMenuItems);
   };
 
-  const handleEdit = (item: any) => {
+  useEffect(() => {
+    const initData = async () => {
+      await loadStockIds();
+      loadMenu();
+    };
+    initData();
+  }, [state]);
+
+  const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
     setName(item.name);
     setPrice(String(item.price));
@@ -268,7 +289,7 @@ export default function MenuPage() {
                     <p className="text-xs text-gray-500 mb-2 uppercase font-semibold tracking-wider">วัตถุดิบ:</p>
                     <div className="flex flex-wrap gap-1.5">
                       {item.ingredients && item.ingredients.length > 0 ? (
-                        item.ingredients.map((ing: any, i: number) => (
+                        item.ingredients.map((ing: Ingredient, i: number) => (
                           <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md border border-gray-200">
                             {ing.name} <span className="text-gray-400 mx-0.5">|</span> {ing.qty}g
                           </span>

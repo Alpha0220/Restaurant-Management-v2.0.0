@@ -1,7 +1,7 @@
 'use client';
 
 import { getDashboardStats } from '@/app/actions';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Loading from '@/components/Loading';
 import {
   LayoutDashboard,
@@ -11,13 +11,60 @@ import {
   Wallet,
   Package,
   ArrowUpRight,
-  ArrowDownRight,
   ShoppingBag,
   ChefHat
 } from 'lucide-react';
 
+interface OrderItem {
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+interface Order {
+  date: string;
+  items: OrderItem[];
+  totalPrice: number;
+}
+
+interface ItemSaleData {
+  quantity: number;
+  sales: number;
+}
+
+interface DashboardStats {
+  totalSales: number;
+  totalCost: number;
+  grossProfit: number;
+  totalStockExpenditure: number;
+  netProfit: number;
+  itemSales: Record<string, ItemSaleData>;
+  orders: Order[];
+}
+
+type FilterType = 'all' | 'day' | 'month' | 'year' | 'custom';
+
+interface FilterButtonProps {
+  type: FilterType;
+  label: string;
+  activeType: FilterType;
+  onClick: (type: FilterType) => void;
+}
+
+const FilterButton = ({ type, label, activeType, onClick }: FilterButtonProps) => (
+  <button
+    onClick={() => onClick(type)}
+    className={`flex-1 min-w-[80px] py-2 text-sm font-medium rounded-lg transition-colors ${activeType === type
+      ? 'bg-blue-600 text-white shadow-sm'
+      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+      }`}
+  >
+    {label}
+  </button>
+);
+
 export default function DashboardPage() {
-  const [stats, setStats] = useState<any>({
+  const [stats, setStats] = useState<DashboardStats>({
     totalSales: 0,
     totalCost: 0,
     grossProfit: 0,
@@ -26,45 +73,51 @@ export default function DashboardPage() {
     itemSales: {},
     orders: []
   });
-  const [filterType, setFilterType] = useState<'all' | 'day' | 'month' | 'year' | 'custom'>('month');
+  const [filterType, setFilterType] = useState<FilterType>('month');
   const [dateValue, setDateValue] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Set default date value
+  const handleFilterChange = useCallback((newType: FilterType) => {
+    setFilterType(newType);
     const now = new Date();
-    if (filterType === 'day') {
+    if (newType === 'day') {
       setDateValue(now.toISOString().split('T')[0]);
-    } else if (filterType === 'month') {
+    } else if (newType === 'month') {
       setDateValue(now.toISOString().slice(0, 7));
-    } else if (filterType === 'year') {
+    } else if (newType === 'year') {
       setDateValue(now.getFullYear().toString());
     } else {
       setDateValue('');
     }
-  }, [filterType]);
+  }, []);
+
+  // Initialize date on mount
+  useEffect(() => {
+    const now = new Date();
+    // Default is 'month'
+    // eslint-disable-next-line
+    setDateValue(now.toISOString().slice(0, 7));
+  }, []);
 
   useEffect(() => {
+    let mounted = true;
+    // eslint-disable-next-line
     setIsLoading(true);
     getDashboardStats(filterType, dateValue, startDate, endDate).then((data) => {
-      setStats(data);
-      setIsLoading(false);
+      if (mounted) {
+        // Explicitly cast to unknown then to DashboardStats because getDashboardStats returns 'any' or an inferred object structure
+        // that matches, but to be safe and clear:
+        setStats(data as unknown as DashboardStats);
+        setIsLoading(false);
+      }
     });
-  }, [filterType, dateValue, startDate, endDate]);
 
-  const FilterButton = ({ type, label }: { type: any, label: string }) => (
-    <button
-      onClick={() => setFilterType(type)}
-      className={`flex-1 min-w-[80px] py-2 text-sm font-medium rounded-lg transition-colors ${filterType === type
-        ? 'bg-blue-600 text-white shadow-sm'
-        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-        }`}
-    >
-      {label}
-    </button>
-  );
+    return () => {
+      mounted = false;
+    };
+  }, [filterType, dateValue, startDate, endDate]);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24 md:pb-8 relative">
@@ -98,11 +151,11 @@ export default function DashboardPage() {
           <div className="space-y-4">
             {/* Filter Buttons Scrollable on mobile */}
             <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
-              {/* <FilterButton type="all" label="ทั้งหมด" /> */}
-              <FilterButton type="day" label="รายวัน" />
-              <FilterButton type="month" label="รายเดือน" />
-              {/* <FilterButton type="year" label="รายปี" /> */}
-              <FilterButton type="custom" label="กำหนดเอง" />
+              {/* <FilterButton type="all" label="ทั้งหมด" activeType={filterType} onClick={handleFilterChange} /> */}
+              <FilterButton type="day" label="รายวัน" activeType={filterType} onClick={handleFilterChange} />
+              <FilterButton type="month" label="รายเดือน" activeType={filterType} onClick={handleFilterChange} />
+              {/* <FilterButton type="year" label="รายปี" activeType={filterType} onClick={handleFilterChange} /> */}
+              <FilterButton type="custom" label="กำหนดเอง" activeType={filterType} onClick={handleFilterChange} />
             </div>
 
             {/* Date Inputs */}
@@ -187,7 +240,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Net Profit */}
-          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-5 rounded-2xl shadow-lg text-white relative overflow-hidden">
+          <div className="bg-linear-to-br from-emerald-500 to-teal-600 p-5 rounded-2xl shadow-lg text-white relative overflow-hidden">
             <div className="absolute right-0 top-0 p-4 opacity-20">
               <Wallet className="w-16 h-16 text-white" />
             </div>
@@ -220,12 +273,12 @@ export default function DashboardPage() {
               ) : (
                 <div className="divide-y divide-gray-100">
                   {Object.entries(stats.itemSales)
-                    .sort(([, a]: [string, any], [, b]: [string, any]) => b.sales - a.sales) // Sort by sales value
-                    .map(([name, data]: [string, any], index) => (
+                    .sort(([, a], [, b]) => b.sales - a.sales) // Sort by sales value
+                    .map(([name, data], index) => (
                       <div key={name} className="px-5 py-3 hover:bg-gray-50 flex items-center justify-between group transition-colors">
                         <div className="flex items-center space-x-3">
                           <span className={`
-                          flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold
+                          shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold
                           ${index === 0 ? 'bg-yellow-100 text-yellow-700' :
                               index === 1 ? 'bg-gray-100 text-gray-700' :
                                 index === 2 ? 'bg-orange-100 text-orange-700' : 'bg-transparent text-gray-400'}
@@ -266,7 +319,7 @@ export default function DashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {stats.orders && stats.orders.length > 0 ? (
-                    stats.orders.slice(0, 10).map((order: any, idx: number) => (
+                    stats.orders.slice(0, 10).map((order, idx) => (
                       <tr key={idx} className="hover:bg-gray-50 transition-colors">
                         <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
                           <div className="font-medium text-gray-700">
@@ -278,7 +331,7 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-5 py-3">
                           <div className="text-gray-700 max-w-[150px] md:max-w-xs truncate">
-                            {order.items.map((i: any) => `${i.name} (${i.quantity})`).join(', ')}
+                            {order.items.map((i) => `${i.name} (${i.quantity})`).join(', ')}
                           </div>
                         </td>
                         <td className="px-5 py-3 text-right font-bold text-gray-900">

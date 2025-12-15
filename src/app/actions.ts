@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation';
 
 // ... (existing imports)
 
-export async function login(prevState: any, formData: FormData) {
+export async function login(prevState: unknown, formData: FormData) {
   const username = formData.get('username') as string;
   const password = formData.get('password') as string;
 
@@ -42,7 +42,7 @@ const stockSchema = z.object({
   user: z.string().min(1, 'ชื่อผู้บันทึกจำเป็นต้องระบุ'),
 });
 
-export async function addStockItem(prevState: any, formData: FormData) {
+export async function addStockItem(prevState: unknown, formData: FormData) {
   const validatedFields = stockSchema.safeParse({
     name: formData.get('name'),
     quantity: formData.get('quantity'),
@@ -85,14 +85,14 @@ const bulkStockSchema = z.object({
       const parsed = JSON.parse(str);
       if (!Array.isArray(parsed)) throw new Error('Must be an array');
       return parsed;
-    } catch (e) {
+    } catch {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid JSON' });
       return z.NEVER;
     }
   }).pipe(z.array(stockSchema)),
 });
 
-export async function addMultipleStockItems(prevState: any, formData: FormData) {
+export async function addMultipleStockItems(prevState: unknown, formData: FormData) {
   const validatedFields = bulkStockSchema.safeParse({
     items: formData.get('items'),
   });
@@ -133,11 +133,11 @@ export async function getStockItems() {
     const rows = await getCachedRows('Stock', ['name', 'quantity', 'price', 'user', 'date']);
     // Sort by date desc
     return rows.map(row => ({
-      name: row.get('name'),
+      name: row.get('name') as string,
       quantity: Number(row.get('quantity')),
       price: Number(row.get('price')),
-      date: row.get('date'),
-      user: row.get('user'),
+      date: row.get('date') as string,
+      user: row.get('user') as string,
     })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch (error) {
     console.error('Failed to fetch stock items:', error);
@@ -162,7 +162,7 @@ const menuSchema = z.object({
   ingredients: z.string().min(1, 'วัตถุดิบจำเป็นต้องระบุ'),
 });
 
-export async function addMenuItem(prevState: any, formData: FormData) {
+export async function addMenuItem(prevState: unknown, formData: FormData) {
   const validatedFields = menuSchema.safeParse({
     name: formData.get('name'),
     price: formData.get('price'),
@@ -196,7 +196,7 @@ export async function addMenuItem(prevState: any, formData: FormData) {
   }
 }
 
-export async function updateMenuItem(prevState: any, formData: FormData) {
+export async function updateMenuItem(prevState: unknown, formData: FormData) {
   const originalName = formData.get('originalName') as string;
   const validatedFields = menuSchema.safeParse({
     name: formData.get('name'),
@@ -238,7 +238,7 @@ export async function updateMenuItem(prevState: any, formData: FormData) {
   }
 }
 
-export async function saveMenuItem(prevState: any, formData: FormData) {
+export async function saveMenuItem(prevState: unknown, formData: FormData) {
   if (formData.get('originalName')) {
     return updateMenuItem(prevState, formData);
   } else {
@@ -273,7 +273,7 @@ export async function getMenuItems() {
       let ingredients = [];
       try {
         ingredients = ingredientsRaw ? JSON.parse(ingredientsRaw) : [];
-      } catch (e) {
+      } catch {
         console.warn(`Failed to parse ingredients for menu item ${row.get('name')}:`, ingredientsRaw);
       }
       return {
@@ -306,7 +306,7 @@ export async function submitOrder(orderItems: { name: string, price: number, qua
       // Calculate cost based on ingredients
       let itemCost = 0;
       for (const ing of menuItem.ingredients) {
-        const stockItem = stockItems.find((s: any) => s.name === ing.name);
+        const stockItem = stockItems.find((s) => s.name === ing.name);
         if (stockItem) {
           // Price per gram * quantity needed
           // Assuming stock price is per unit (e.g. per pack), we need to know price per gram.
@@ -352,7 +352,7 @@ export async function getDashboardStats(
     let totalCost = 0; // Cost of goods sold (ingredients used)
     let totalStockExpenditure = 0; // Money spent on buying stock
     const itemSales: Record<string, { quantity: number, sales: number }> = {};
-    const orders: any[] = [];
+    const orders: { date: string; items: { name: string; quantity: number; price: number }[]; totalPrice: number }[] = [];
 
     // Helper to check if a date matches the filter
     const isDateInFilter = (dateStr: string) => {
@@ -385,7 +385,7 @@ export async function getDashboardStats(
         let items = [];
         try {
           items = itemsRaw ? JSON.parse(itemsRaw) : [];
-        } catch (e) {
+        } catch {
           console.warn('Failed to parse order items:', itemsRaw);
         }
 
@@ -395,7 +395,7 @@ export async function getDashboardStats(
           totalPrice: Number(row.get('totalPrice')),
         });
 
-        items.forEach((item: any) => {
+        items.forEach((item: { name: string; quantity: number; price: number }) => {
           if (!itemSales[item.name]) {
             itemSales[item.name] = { quantity: 0, sales: 0 };
           }
