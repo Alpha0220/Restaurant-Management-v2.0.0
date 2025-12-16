@@ -6,12 +6,12 @@ import Loading from '@/components/Loading';
 import {
   LayoutDashboard,
   Calendar,
-  DollarSign,
-  TrendingUp,
-  Wallet,
+  // DollarSign,
+  // TrendingUp,
+  // Wallet,
   Package,
   ArrowUpRight,
-  ShoppingBag,
+  // ShoppingBag,
   ChefHat
 } from 'lucide-react';
 
@@ -25,6 +25,7 @@ interface Order {
   date: string;
   items: OrderItem[];
   totalPrice: number;
+  totalCost: number;
 }
 
 interface ItemSaleData {
@@ -44,24 +45,8 @@ interface DashboardStats {
 
 type FilterType = 'all' | 'day' | 'month' | 'year' | 'custom';
 
-interface FilterButtonProps {
-  type: FilterType;
-  label: string;
-  activeType: FilterType;
-  onClick: (type: FilterType) => void;
-}
 
-const FilterButton = ({ type, label, activeType, onClick }: FilterButtonProps) => (
-  <button
-    onClick={() => onClick(type)}
-    className={`flex-1 min-w-[80px] py-2 text-sm font-medium rounded-lg transition-colors ${activeType === type
-      ? 'bg-blue-600 text-white shadow-sm'
-      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-      }`}
-  >
-    {label}
-  </button>
-);
+type ViewType = 'sales' | 'topItems';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
@@ -73,11 +58,12 @@ export default function DashboardPage() {
     itemSales: {},
     orders: []
   });
-  const [filterType, setFilterType] = useState<FilterType>('month');
+  const [filterType, setFilterType] = useState<FilterType>('day');
   const [dateValue, setDateValue] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [viewType, setViewType] = useState<ViewType>('sales');
 
   const handleFilterChange = useCallback((newType: FilterType) => {
     setFilterType(newType);
@@ -96,9 +82,9 @@ export default function DashboardPage() {
   // Initialize date on mount
   useEffect(() => {
     const now = new Date();
-    // Default is 'month'
+    // Default is 'day'
     // eslint-disable-next-line
-    setDateValue(now.toISOString().slice(0, 7));
+    setDateValue(now.toISOString().split('T')[0]);
   }, []);
 
   useEffect(() => {
@@ -128,232 +114,405 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto p-4 space-y-6">
+      <div className="max-w-7xl mx-auto p-3 md:p-4 space-y-4 md:space-y-6">
 
         {/* Header */}
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="p-3 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
-            <LayoutDashboard className="w-6 h-6 text-white" />
+        <div className="flex items-center space-x-2 md:space-x-3 mb-4 md:mb-6">
+          <div className="p-2 md:p-3 bg-slate-700 rounded-lg md:rounded-xl shadow-sm">
+            <LayoutDashboard className="w-5 h-5 md:w-6 md:h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-            <p className="text-gray-500 text-sm">สรุปผลการดำเนินงานของร้าน</p>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800">Dashboard</h1>
+            <p className="text-gray-500 text-xs md:text-sm">สรุปผลการดำเนินงานของร้าน</p>
           </div>
         </div>
 
         {/* Filters Panel */}
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center mb-3 text-sm font-medium text-gray-700">
-            <Calendar className="w-4 h-4 mr-2 text-blue-500" />
+        <div className="bg-white p-2.5 md:p-3 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center mb-2 text-xs font-medium text-gray-600">
+            <Calendar className="w-3.5 h-3.5 mr-1.5 text-gray-500" />
             ตัวกรองวันที่
           </div>
 
-          <div className="space-y-4">
-            {/* Filter Buttons Scrollable on mobile */}
-            <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
-              {/* <FilterButton type="all" label="ทั้งหมด" activeType={filterType} onClick={handleFilterChange} /> */}
-              <FilterButton type="day" label="รายวัน" activeType={filterType} onClick={handleFilterChange} />
-              <FilterButton type="month" label="รายเดือน" activeType={filterType} onClick={handleFilterChange} />
-              {/* <FilterButton type="year" label="รายปี" activeType={filterType} onClick={handleFilterChange} /> */}
-              <FilterButton type="custom" label="กำหนดเอง" activeType={filterType} onClick={handleFilterChange} />
-            </div>
+          <div className="space-y-2.5">
+            {/* Filter Type Dropdown + Date Input */}
+            <div className="flex gap-2 items-start">
+              {/* Dropdown for Filter Type */}
+              <select
+                value={filterType}
+                onChange={(e) => handleFilterChange(e.target.value as FilterType)}
+                className="w-32 md:w-40 bg-white border border-gray-300 rounded-md px-2.5 py-1.5 text-gray-800 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
+              >
+                <option value="day">รายวัน</option>
+                <option value="month">รายเดือน</option>
+                <option value="custom">กำหนดเอง</option>
+              </select>
 
-            {/* Date Inputs */}
-            {(filterType !== 'all') && (
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 animate-fade-in">
-                {filterType !== 'custom' ? (
-                  <input
-                    type={filterType === 'day' ? 'date' : filterType === 'month' ? 'month' : 'number'}
-                    value={dateValue}
-                    onChange={(e) => setDateValue(e.target.value)}
-                    className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder={filterType === 'year' ? 'Ex: 2024' : ''}
-                  />
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">วันที่เริ่มต้น</label>
-                      <input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">วันที่สิ้นสุด</label>
-                      <input
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 text-sm"
-                      />
-                    </div>
+              {/* Date Input */}
+              {filterType !== 'custom' && (
+                <input
+                  type={filterType === 'day' ? 'date' : 'month'}
+                  value={dateValue}
+                  onChange={(e) => setDateValue(e.target.value)}
+                  className="w-44 md:w-52 bg-white border border-gray-300 rounded-md px-2.5 py-1.5 text-gray-800 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              )}
+
+              {/* Custom Date Range - Inline */}
+              {filterType === 'custom' && (
+                <>
+                  <div>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      placeholder="วันที่เริ่มต้น"
+                      className="w-40 md:w-44 bg-white border border-gray-300 rounded-md px-2.5 py-1.5 text-gray-800 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
                   </div>
-                )}
-              </div>
-            )}
+                  <span className="text-gray-400 self-center">-</span>
+                  <div>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      placeholder="วันที่สิ้นสุด"
+                      className="w-40 md:w-44 bg-white border border-gray-300 rounded-md px-2.5 py-1.5 text-gray-800 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Key Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {/* Total Sales */}
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-blue-100 relative overflow-hidden group">
-            <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <DollarSign className="w-16 h-16 text-blue-600" />
-            </div>
-            <div className="relative z-10">
-              <p className="text-sm font-medium text-blue-600 mb-1 flex items-center">
-                ยอดขายรวม <ArrowUpRight className="w-3 h-3 ml-1" />
-              </p>
-              <h3 className="text-2xl font-bold text-gray-800">฿{stats.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-            </div>
-          </div>
-
-          {/* Gross Profit */}
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-green-100 relative overflow-hidden group">
-            <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <TrendingUp className="w-16 h-16 text-green-600" />
-            </div>
-            <div className="relative z-10">
-              <p className="text-sm font-medium text-green-600 mb-1 flex items-center">
-                กำไรขั้นต้น
-              </p>
-              <h3 className="text-2xl font-bold text-gray-800">฿{stats.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-              <p className="text-xs text-green-500 mt-1">ยอดขาย - ต้นทุนสินค้า (COGS)</p>
-            </div>
+          <div className="bg-emerald-50 p-4 md:p-5 rounded-xl shadow-sm border border-emerald-200 hover:shadow-md transition-shadow">
+            <p className="text-xs md:text-sm font-semibold text-emerald-700 mb-2 flex items-center">
+             💰 ยอดขายรวม <ArrowUpRight className="w-3 h-3 md:w-4 md:h-4 ml-1" /> 
+            </p>
+            <h3 className="text-xl md:text-2xl font-bold text-emerald-800">฿{stats.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           </div>
 
           {/* COGS */}
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-red-100 relative overflow-hidden group">
-            <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <ShoppingBag className="w-16 h-16 text-red-600" />
-            </div>
-            <div className="relative z-10">
-              <p className="text-sm font-medium text-red-600 mb-1 flex items-center">
-                ต้นทุนสินค้า (COGS)
-              </p>
-              <h3 className="text-2xl font-bold text-gray-800">฿{stats.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-              <p className="text-xs text-red-400 mt-1">Cost of Goods Sold</p>
-            </div>
+          <div className="bg-orange-50 p-4 md:p-5 rounded-xl shadow-sm border border-orange-200 hover:shadow-md transition-shadow">
+            <p className="text-xs md:text-sm font-semibold text-orange-700 mb-2 flex items-center">
+              🍳 ต้นทุนต่อจาน
+            </p>
+            <h3 className="text-xl md:text-2xl font-bold text-orange-800">฿{stats.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           </div>
 
-          {/* Net Profit */}
-          <div className="bg-linear-to-br from-emerald-500 to-teal-600 p-5 rounded-2xl shadow-lg text-white relative overflow-hidden">
-            <div className="absolute right-0 top-0 p-4 opacity-20">
-              <Wallet className="w-16 h-16 text-white" />
-            </div>
-            <div className="relative z-10">
-              <p className="text-sm font-medium text-emerald-100 mb-1 flex items-center">
-                กำไรสุทธิ (Cash Flow)
-              </p>
-              <h3 className="text-3xl font-bold">฿{stats.netProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-              <p className="text-xs text-emerald-100 mt-2 opacity-80">
-                ยอดขาย - รายจ่ายซื้อของเข้าร้าน (฿{stats.totalStockExpenditure.toLocaleString()})
-              </p>
-            </div>
+          {/* Stock Expenditure */}
+          <div className="bg-rose-50 p-4 md:p-5 rounded-xl shadow-sm border border-rose-200 hover:shadow-md transition-shadow">
+            <p className="text-xs md:text-sm font-semibold text-rose-700 mb-2 flex items-center">
+              📦 ยอดซื้อวัตถุดิบ
+            </p>
+            <h3 className="text-xl md:text-2xl font-bold text-rose-800">฿{stats.totalStockExpenditure.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+          </div>
+
+          {/* Gross Profit */}
+          <div className="bg-teal-600 p-4 md:p-5 rounded-xl shadow-sm border border-teal-500 text-white hover:shadow-md transition-shadow">
+            <p className="text-xs md:text-sm font-semibold text-teal-50 mb-2 flex items-center">
+              ✨ กำไร
+            </p>
+            <h3 className="text-xl md:text-2xl font-bold text-white">฿{stats.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           </div>
         </div>
 
-        {/* Detailed Reports Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-          {/* Top Products */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-              <h3 className="font-semibold text-gray-800 flex items-center">
-                <ChefHat className="w-5 h-5 mr-2 text-orange-500" />
-                เมนูขายดี
-              </h3>
-            </div>
-            <div className="p-0">
-              {Object.keys(stats.itemSales).length === 0 ? (
-                <div className="p-8 text-center text-gray-400">ไม่มีข้อมูลการขาย</div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {Object.entries(stats.itemSales)
-                    .sort(([, a], [, b]) => b.sales - a.sales) // Sort by sales value
-                    .map(([name, data], index) => (
-                      <div key={name} className="px-5 py-3 hover:bg-gray-50 flex items-center justify-between group transition-colors">
-                        <div className="flex items-center space-x-3">
-                          <span className={`
-                          shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold
-                          ${index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                              index === 1 ? 'bg-gray-100 text-gray-700' :
-                                index === 2 ? 'bg-orange-100 text-orange-700' : 'bg-transparent text-gray-400'}
-                        `}>
-                            {index + 1}
-                          </span>
-                          <div>
-                            <p className="text-sm font-medium text-gray-800">{name}</p>
-                            <p className="text-xs text-gray-500">ขายแล้ว {data.quantity}</p>
-                          </div>
-                        </div>
-                        <span className="text-sm font-bold text-gray-900">
-                          ฿{data.sales.toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
+        {/* View Type Filter Buttons */}
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100">
+          <div className="flex gap-2 md:gap-3">
+            <button
+              onClick={() => setViewType('sales')}
+              className={`flex-1 py-2.5 md:py-3 px-2 md:px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-1 md:gap-2 text-sm md:text-base ${
+                viewType === 'sales'
+                  ? 'bg-slate-700 text-white shadow-sm hover:bg-slate-800'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Package className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="hidden sm:inline">ประวัติการขายล่าสุด</span>
+              <span className="sm:hidden">ประวัติการขาย</span>
+            </button>
+            <button
+              onClick={() => setViewType('topItems')}
+              className={`flex-1 py-2.5 md:py-3 px-2 md:px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-1 md:gap-2 text-sm md:text-base ${
+                viewType === 'topItems'
+                  ? 'bg-slate-700 text-white shadow-sm hover:bg-slate-800'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <ChefHat className="w-4 h-4 md:w-5 md:h-5" />
+              เมนูทั้งหมด
+            </button>
           </div>
+        </div>
 
-          {/* Recent Orders */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-              <h3 className="font-semibold text-gray-800 flex items-center">
-                <Package className="w-5 h-5 mr-2 text-blue-500" />
-                ประวัติการขายล่าสุด
-              </h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-gray-50 text-gray-500 font-medium">
-                  <tr>
-                    <th className="px-5 py-3 w-32">เวลา</th>
-                    <th className="px-5 py-3">รายการ</th>
-                    <th className="px-5 py-3 text-right">ยอดรวม</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {stats.orders && stats.orders.length > 0 ? (
-                    stats.orders.slice(0, 10).map((order, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
-                          <div className="font-medium text-gray-700">
-                            {new Date(order.date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit' })}
-                          </div>
-                          <div className="text-xs">
-                            {new Date(order.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </td>
-                        <td className="px-5 py-3">
-                          <div className="text-gray-700 max-w-[150px] md:max-w-xs truncate">
-                            {order.items.map((i) => `${i.name} (${i.quantity})`).join(', ')}
-                          </div>
-                        </td>
-                        <td className="px-5 py-3 text-right font-bold text-gray-900">
-                          ฿{order.totalPrice.toLocaleString()}
+        {/* Report Table/Cards */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          {viewType === 'sales' ? (
+            <>
+              {/* Desktop: Sales History Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-gray-700 font-semibold">
+                    <tr>
+                      <th className="px-4 py-3 text-left whitespace-nowrap">วันที่</th>
+                      <th className="px-4 py-3 text-left">รายการอาหาร</th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap">ยอดขาย</th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap">ต้นทุนต่อจาน</th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap">กำไร</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {stats.orders && stats.orders.length > 0 ? (
+                      stats.orders.map((order, idx) => {
+                        const profit = order.totalPrice - order.totalCost;
+                        return (
+                          <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                              <div className="font-medium text-gray-800">
+                                {new Date(order.date).toLocaleDateString('th-TH', { 
+                                  day: '2-digit', 
+                                  month: '2-digit', 
+                                  year: 'numeric' 
+                                })}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {new Date(order.date).toLocaleTimeString('th-TH', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="space-y-1">
+                                {order.items.map((item, i) => (
+                                  <div key={i} className="text-gray-700">
+                                    {item.name} <span className="text-gray-500">x{item.quantity}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                              ฿{order.totalPrice.toLocaleString(undefined, { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                              })}
+                            </td>
+                            <td className="px-4 py-3 text-right text-red-600 font-medium">
+                              ฿{order.totalCost.toLocaleString(undefined, { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                              })}
+                            </td>
+                            <td className="px-4 py-3 text-right font-bold text-green-600">
+                              ฿{profit.toLocaleString(undefined, { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                              })}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-gray-400">
+                          ไม่มีข้อมูลการขาย
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={3} className="p-8 text-center text-gray-400">ไม่มีคำสั่งซื้อล่าสุด</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {stats.orders && stats.orders.length > 10 && (
-              <div className="p-3 bg-gray-50 text-center border-t border-gray-100">
-                <span className="text-xs text-gray-500">แสดง 10 รายการล่าสุด</span>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </div>
 
+              {/* Mobile: Sales History Cards */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {stats.orders && stats.orders.length > 0 ? (
+                  stats.orders.map((order, idx) => {
+                    const profit = order.totalPrice - order.totalCost;
+                    return (
+                      <div key={idx} className="p-4 hover:bg-gray-50 transition-colors">
+                        {/* Date & Time */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="p-2 bg-blue-50 rounded-lg">
+                              <Calendar className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-800 text-sm">
+                                {new Date(order.date).toLocaleDateString('th-TH', { 
+                                  day: '2-digit', 
+                                  month: '2-digit', 
+                                  year: 'numeric' 
+                                })}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {new Date(order.date).toLocaleTimeString('th-TH', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Items */}
+                        <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                          <div className="text-xs text-gray-500 mb-1">รายการอาหาร</div>
+                          <div className="space-y-1">
+                            {order.items.map((item, i) => (
+                              <div key={i} className="text-sm text-gray-700 font-medium">
+                                {item.name} <span className="text-gray-500">x{item.quantity}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Financial Summary */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="text-center p-2 bg-blue-50 rounded-lg">
+                            <div className="text-xs text-gray-600 mb-1">ยอดขาย</div>
+                            <div className="text-sm font-bold text-gray-900">
+                              ฿{order.totalPrice.toLocaleString(undefined, { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                              })}
+                            </div>
+                          </div>
+                          <div className="text-center p-2 bg-red-50 rounded-lg">
+                            <div className="text-xs text-gray-600 mb-1">ต้นทุนต่อจาน</div>
+                            <div className="text-sm font-bold text-red-600">
+                              ฿{order.totalCost.toLocaleString(undefined, { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                              })}
+                            </div>
+                          </div>
+                          <div className="text-center p-2 bg-green-50 rounded-lg">
+                            <div className="text-xs text-gray-600 mb-1">กำไร</div>
+                            <div className="text-sm font-bold text-green-600">
+                              ฿{profit.toLocaleString(undefined, { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="p-8 text-center text-gray-400">
+                    ไม่มีข้อมูลการขาย
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Desktop: All Menu Items Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-gray-700 font-semibold">
+                    <tr>
+                      <th className="px-4 py-3 text-left">อันดับ</th>
+                      <th className="px-4 py-3 text-left">เมนู</th>
+                      <th className="px-4 py-3 text-right">จำนวนที่ขาย</th>
+                      <th className="px-4 py-3 text-right">ยอดขาย</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {Object.keys(stats.itemSales).length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="p-8 text-center text-gray-400">
+                          ไม่มีข้อมูลการขาย
+                        </td>
+                      </tr>
+                    ) : (
+                      Object.entries(stats.itemSales)
+                        .sort(([, a], [, b]) => b.sales - a.sales)
+                        .map(([name, data], index) => (
+                          <tr key={name} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3">
+                              <span className={`
+                                inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold
+                                ${index === 0 ? 'bg-amber-400 text-amber-900 shadow-sm' :
+                                  index === 1 ? 'bg-slate-300 text-slate-700 shadow-sm' :
+                                  index === 2 ? 'bg-orange-300 text-orange-800 shadow-sm' : 
+                                  'bg-gray-100 text-gray-600'}
+                              `}>
+                                {index + 1}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 font-medium text-gray-800">{name}</td>
+                            <td className="px-4 py-3 text-right text-gray-700">
+                              {data.quantity} <span className="text-gray-500 text-xs">ชิ้น</span>
+                            </td>
+                            <td className="px-4 py-3 text-right font-bold text-gray-900">
+                              ฿{data.sales.toLocaleString(undefined, { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                              })}
+                            </td>
+                          </tr>
+                        ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile: All Menu Items Cards */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {Object.keys(stats.itemSales).length === 0 ? (
+                  <div className="p-8 text-center text-gray-400">
+                    ไม่มีข้อมูลการขาย
+                  </div>
+                ) : (
+                  Object.entries(stats.itemSales)
+                    .sort(([, a], [, b]) => b.sales - a.sales)
+                    .map(([name, data], index) => (
+                      <div key={name} className="p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 flex-1">
+                            {/* Rank Badge */}
+                            <span className={`
+                              shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-base font-bold shadow-sm
+                              ${index === 0 ? 'bg-amber-400 text-amber-900' :
+                                index === 1 ? 'bg-slate-300 text-slate-700' :
+                                index === 2 ? 'bg-orange-300 text-orange-800' : 
+                                'bg-gray-100 text-gray-600'}
+                            `}>
+                              {index + 1}
+                            </span>
+                            
+                            {/* Menu Info */}
+                            <div className="flex-1">
+                              <div className="font-semibold text-gray-800 mb-1">{name}</div>
+                              <div className="text-sm text-gray-600">
+                                ขายไปแล้ว <span className="font-medium text-gray-800">{data.quantity}</span> ชิ้น
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Sales Amount */}
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-gray-900">
+                              ฿{data.sales.toLocaleString(undefined, { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
