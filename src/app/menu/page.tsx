@@ -15,6 +15,15 @@ interface MenuItem {
   ingredients?: Ingredient[];
 }
 
+// Helper function to format quantity with appropriate unit
+const formatQuantity = (grams: number): string => {
+  if (grams >= 1000) {
+    const kilos = grams / 1000;
+    return `${kilos.toLocaleString()} กิโลกรัม`;
+  }
+  return `${grams.toLocaleString()} กรัม`;
+};
+
 interface StockItem {
   name: string;
   quantity: number;
@@ -28,15 +37,6 @@ const initialState = {
   errors: {},
 };
 
-// Helper function to format quantity with appropriate unit
-const formatQuantity = (grams: number): string => {
-  if (grams >= 1000) {
-    const kilos = grams / 1000;
-    return `${kilos.toLocaleString()} กิโล`;
-  }
-  return `${grams.toLocaleString()} กรัม`;
-};
-
 export default function MenuPage() {
   const [state, dispatch] = useActionState(saveMenuItem, initialState);
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
@@ -45,7 +45,7 @@ export default function MenuPage() {
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   // Expanded items state for dropdown
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
@@ -77,6 +77,18 @@ export default function MenuPage() {
 
   const loadMenu = () => {
     getMenuItems().then(setMenuItems);
+  };
+
+  const toggleExpanded = (itemName: string) => {
+    setExpandedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemName)) {
+        newSet.delete(itemName);
+      } else {
+        newSet.add(itemName);
+      }
+      return newSet;
+    });
   };
 
   useEffect(() => {
@@ -136,16 +148,6 @@ export default function MenuPage() {
     setSelectedIngredients(newIngredients);
   };
 
-  const toggleExpanded = (itemName: string) => {
-    const newExpanded = new Set(expandedItems);
-    if (newExpanded.has(itemName)) {
-      newExpanded.delete(itemName);
-    } else {
-      newExpanded.add(itemName);
-    }
-    setExpandedItems(newExpanded);
-  };
-
   const filteredItems = menuItems.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -153,21 +155,20 @@ export default function MenuPage() {
   return (
     <div className="max-w-7xl mx-auto mt-6 p-4">
       {/* Header */}
-      <div className="flex justify-between items-start mb-8">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-xl md:text-2xl font-bold text-gray-800 flex items-center">
-            <ChefHat className="w-6 h-6 md:w-8 md:h-8 mr-2 md:mr-3 text-orange-500" />
+      <div className="flex flex-col gap-4 mb-8 md:flex-row md:justify-between md:items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center">
+            <ChefHat className="w-8 h-8 mr-3 text-orange-500" />
             จัดการเมนูอาหาร
           </h1>
-          <p className="text-gray-500 text-xs md:text-sm mt-1">สร้างสรรค์เมนูและจัดการสูตรอาหารของคุณ</p>
+          <p className="text-gray-500 text-sm mt-1">สร้างสรรค์เมนูและจัดการสูตรอาหารของคุณ</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-orange-600 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg hover:bg-orange-700 flex items-center shadow-md transition-transform transform active:scale-95 text-sm md:text-base flex-shrink-0 ml-2"
+          className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center shadow-md transition-transform transform active:scale-95 self-end md:self-auto"
         >
-          <Plus className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" />
-          <span className="hidden sm:inline">เพิ่มเมนูใหม่</span>
-          <span className="sm:hidden">เพิ่ม</span>
+          <Plus className="w-5 h-5 mr-2" />
+          เพิ่มเมนูใหม่
         </button>
       </div>
 
@@ -196,42 +197,44 @@ export default function MenuPage() {
           filteredItems.map((item, index) => {
             const isExpanded = expandedItems.has(item.name);
             return (
-              <div key={`${item.name}-${index}`} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow group">
-                {/* Header - Always visible */}
+              <div key={`${item.name}-${index}`} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                {/* Header - Always Visible */}
                 <div 
-                  className="p-5 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => toggleExpanded(item.name)}
+                  className="flex justify-between items-center p-5 cursor-pointer hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2 flex-1">
-                      <h3 className="font-bold text-gray-900 text-lg">{item.name}</h3>
-                      {item.ingredients && item.ingredients.length > 0 && (
-                        isExpanded ? 
-                          <ChevronUp className="w-5 h-5 text-gray-400" /> : 
-                          <ChevronDown className="w-5 h-5 text-gray-400" />
-                      )}
-                    </div>
-                    <span className="font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg text-sm">฿{item.price.toLocaleString()}</span>
+                  <div className="flex items-center gap-3 flex-1">
+                    <h3 className="font-bold text-gray-900 text-lg">{item.name}</h3>
+                    <span className="font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-lg text-sm">฿{item.price.toLocaleString()}</span>
                   </div>
+                  {isExpanded ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                  )}
                 </div>
 
-                {/* Dropdown Content - Ingredients */}
-                {isExpanded && item.ingredients && item.ingredients.length > 0 && (
+                {/* Expandable Content - Ingredients */}
+                {isExpanded && (
                   <div className="px-5 pb-4 border-t border-gray-100 pt-4 bg-gray-50">
                     <p className="text-xs text-gray-500 mb-3 uppercase font-semibold tracking-wider">วัตถุดิบ:</p>
-                    <div className="space-y-2">
-                      {item.ingredients.map((ing: Ingredient, i: number) => (
-                        <div key={i} className="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-gray-200">
-                          <span className="text-sm font-medium text-gray-700">{ing.name}:</span>
-                          <span className="text-sm text-gray-600">{formatQuantity(ing.qty)}</span>
-                        </div>
-                      ))}
+                    <div className="space-y-2 mb-4">
+                      {item.ingredients && item.ingredients.length > 0 ? (
+                        item.ingredients.map((ing: Ingredient, i: number) => (
+                          <div key={i} className="flex justify-between items-center bg-white p-2 rounded-lg border border-gray-200">
+                            <span className="text-sm text-gray-700 font-medium">{ing.name}</span>
+                            <span className="text-sm text-gray-600">{formatQuantity(ing.qty)}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">ไม่ได้ระบุ</span>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {/* Action Buttons */}
-                <div className="flex justify-end px-5 pb-4 gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                {/* Action Buttons - Always Visible */}
+                <div className="flex justify-end px-5 pb-4 gap-2 border-t border-gray-100 pt-3">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -337,13 +340,13 @@ export default function MenuPage() {
                       type="number"
                       value={ingQty}
                       onChange={(e) => setIngQty(e.target.value)}
-                      placeholder="0.0"
+                      placeholder="0"
                       className="w-20 rounded-lg border-gray-300 text-gray-600 text-sm p-2 border focus:ring-orange-500 focus:border-orange-500"
                     />
                     <select
                       value={ingUnit}
                       onChange={(e) => setIngUnit(e.target.value)}
-                      className="w-24 rounded-lg border-gray-300 text-gray-600 text-sm p-2 border focus:ring-orange-500 focus:border-orange-500"
+                      className="w-28 rounded-lg border-gray-300 text-gray-600 text-sm p-2 border focus:ring-orange-500 focus:border-orange-500"
                     >
                       <option value="g">กรัม</option>
                       <option value="kg">กิโลกรัม</option>

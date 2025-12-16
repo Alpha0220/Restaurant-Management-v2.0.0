@@ -2,9 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, UtensilsCrossed, Package, Store, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, Package, Store, LogOut } from 'lucide-react';
 import { logout } from '@/app/actions';
-import { useSidebar } from '@/contexts/SidebarContext';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -15,25 +14,14 @@ const navItems = [
 
 export default function Navigation() {
   const pathname = usePathname();
-  const { isCollapsed, setIsCollapsed } = useSidebar();
 
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className={`hidden md:flex flex-col bg-gray-900 text-white h-screen fixed left-0 top-0 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
-        {/* Header */}
-        <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-          {!isCollapsed && <h1 className="text-xl font-bold">Restaurant App</h1>}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors ml-auto"
-            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-          </button>
+      <div className="hidden md:flex flex-col w-64 bg-gray-900 text-white h-screen fixed left-0 top-0">
+        <div className="p-6 border-b border-gray-800">
+          <h1 className="text-xl font-bold">Restaurant App</h1>
         </div>
-
-        {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -42,29 +30,25 @@ export default function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg transition-colors ${isActive
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
                   ? 'bg-blue-600 text-white'
                   : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                   }`}
-                title={isCollapsed ? item.label : ''}
               >
                 <Icon size={20} />
-                {!isCollapsed && <span className="font-medium">{item.label}</span>}
+                <span className="font-medium">{item.label}</span>
               </Link>
             );
           })}
         </nav>
-
-        {/* Logout */}
         <div className="p-4 border-t border-gray-800">
           <form action={logout}>
             <button
               type="submit"
-              className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg text-red-400 hover:bg-gray-800 w-full transition-colors`}
-              title={isCollapsed ? 'Logout' : ''}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-gray-800 w-full transition-colors"
             >
               <LogOut size={20} />
-              {!isCollapsed && <span className="font-medium">Logout</span>}
+              <span className="font-medium">Logout</span>
             </button>
           </form>
         </div>
