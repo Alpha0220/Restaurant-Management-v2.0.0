@@ -132,13 +132,24 @@ export async function addMultipleStockItems(prevState: unknown, formData: FormDa
     const sheet = await getSheet('Stock', ['name', 'quantity', 'price', 'user', 'date', 'receipt']);
     const date = new Date().toISOString();
     
+    // 0. Handle Batch File (if exists)
+    const batchFile = formData.get('batch_file') as File | null;
+    let batchReceiptUrl = '';
+    
+    if (batchFile && batchFile.size > 0) {
+      try {
+        batchReceiptUrl = await uploadToCloudinary(batchFile);
+      } catch (e) {
+        console.error('Failed to upload batch file', e);
+      }
+    }
+    
     // Process uploads for each item
     const rowsToAdd = await Promise.all(items.map(async (item, index) => {
-       let receiptLink = '';
-       // Check if there is a file matching this item index
-       // The frontend must append files as 'file_0', 'file_1', etc. based on the ARRAY INDEX.
-       // However, the 'items' array here corresponds directly to the JSON sent.
-       // We need to trust the index alignment.
+       let receiptLink = batchReceiptUrl; // Default to batch URL
+       
+       // Check if there is a specific file for this item (overrides batch?)
+       // Or should it be specific file takes precedence? Yes.
        const file = formData.get(`file_${index}`) as File | null;
        
        if (file && file.size > 0) {
