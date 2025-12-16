@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, useRef, useCallback } from 'react';
 import { addMultipleStockItems, getStockItems, getStockNames } from '@/app/actions';
-import { Plus, Clock, Save, X, ShoppingCart } from 'lucide-react';
+import { Plus, Clock, Save, X, ShoppingCart, Upload, FileText, Image as ImageIcon } from 'lucide-react';
 
 interface StockItem {
   _id?: string;
@@ -12,6 +12,8 @@ interface StockItem {
   price: number;
   user: string;
   date?: string;
+  receipt?: string; // URL from Google Drive
+  file?: File; // Local file to upload
 }
 
 export default function StockPage() {
@@ -23,7 +25,9 @@ export default function StockPage() {
   const [nameInput, setNameInput] = useState('');
   const [quantityInput, setQuantityInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
+  const [fileInput, setFileInput] = useState<File | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Refs for focus management
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +80,18 @@ export default function StockPage() {
     setNameInput(name);
     setSuggestions([]);
   };
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      // Check size (e.g. limit to 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+         alert("ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 10MB)");
+         return;
+      }
+      setFileInput(file);
+    }
+  };
 
   const addToPendingList = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -91,6 +107,7 @@ export default function StockPage() {
       price: Number(priceInput),
       user: currentUser,
       tempId: Date.now(),
+      file: fileInput || undefined
     };
 
     setPendingItems([...pendingItems, newItem]);
@@ -99,6 +116,8 @@ export default function StockPage() {
     setNameInput('');
     setQuantityInput('');
     setPriceInput('');
+    setFileInput(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setMessage(null);
     nameInputRef.current?.focus();
   };
@@ -111,11 +130,20 @@ export default function StockPage() {
     if (pendingItems.length === 0) return;
 
     startTransition(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const itemsPayload = JSON.stringify(pendingItems.map(({ tempId, ...rest }) => rest));
-
+      // Create FormData
       const formData = new FormData();
+      
+      // 1. Append JSON data (without File objects)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const itemsPayload = JSON.stringify(pendingItems.map(({ tempId, file, ...rest }) => rest));
       formData.append('items', itemsPayload);
+      
+      // 2. Append Files separately, mapped by index
+      pendingItems.forEach((item, index) => {
+        if (item.file) {
+          formData.append(`file_${index}`, item.file);
+        }
+      });
 
       const result = await addMultipleStockItems(null, formData);
 
@@ -161,7 +189,7 @@ export default function StockPage() {
               <Plus className="w-5 h-5 mr-2 text-blue-600" /> เพิ่มรายการใหม่
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-              <div className="md:col-span-5 relative">
+              <div className="md:col-span-12 lg:col-span-4 relative">
                 <label className="block text-xs font-medium text-gray-500 mb-1">ชื่อวัตถุดิบ</label>
                 <input
                   ref={nameInputRef}
@@ -182,7 +210,7 @@ export default function StockPage() {
                   </ul>
                 )}
               </div>
-              <div className="md:col-span-3">
+              <div className="md:col-span-3 lg:col-span-2">
                 <label className="block text-xs font-medium text-gray-500 mb-1">ปริมาณ</label>
                 <input
                   type="number"
@@ -194,7 +222,7 @@ export default function StockPage() {
                   placeholder="0.0"
                 />
               </div>
-              <div className="md:col-span-3">
+              <div className="md:col-span-3 lg:col-span-2">
                 <label className="block text-xs font-medium text-gray-500 mb-1">ราคา</label>
                 <input
                   type="number"
@@ -207,7 +235,29 @@ export default function StockPage() {
                   placeholder="0.00"
                 />
               </div>
-              <div className="md:col-span-1">
+               {/* File Input */}
+               <div className="md:col-span-5 lg:col-span-3">
+                <label className="block text-xs font-medium text-gray-500 mb-1">ใบเสร็จ/รูปภาพ (Optional)</label>
+                <div className="relative">
+                   <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={handleFileChange}
+                      className="hidden" 
+                      id="file-upload"
+                   />
+                   <label 
+                      htmlFor="file-upload" 
+                      className={`flex items-center justify-center w-full px-3 py-2.5 border border-dashed rounded-lg cursor-pointer transition-colors text-sm ${fileInput ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300 text-gray-500 hover:bg-gray-50'}`}
+                   >
+                      <Upload className="w-4 h-4 mr-2" />
+                      <span className="truncate">{fileInput ? fileInput.name : 'เลือกไฟล์'}</span>
+                   </label>
+                </div>
+              </div>
+
+              <div className="md:col-span-1 lg:col-span-1">
                 <button
                   onClick={() => addToPendingList()}
                   className="w-full h-[42px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center shadow-sm"
@@ -243,6 +293,7 @@ export default function StockPage() {
                       <th className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">ชื่อ</th>
                       <th className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">ปริมาณ</th>
                       <th className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">ราคา</th>
+                      <th className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">ไฟล์</th>
                       <th className="px-6 py-2"></th>
                     </tr>
                   </thead>
@@ -252,6 +303,14 @@ export default function StockPage() {
                         <td className="px-6 py-3 text-sm font-medium text-gray-900">{item.name}</td>
                         <td className="px-6 py-3 text-sm text-gray-600">{item.quantity}</td>
                         <td className="px-6 py-3 text-sm text-gray-900 font-medium">฿{item.price.toLocaleString()}</td>
+                        <td className="px-6 py-3 text-sm text-gray-500">
+                            {item.file && (
+                                <span className="flex items-center text-xs bg-gray-100 px-2 py-1 rounded max-w-[100px] truncate" title={item.file.name}>
+                                    {item.file.type.includes('pdf') ? <FileText className="w-3 h-3 mr-1"/> : <ImageIcon className="w-3 h-3 mr-1"/>}
+                                    {item.file.name}
+                                </span>
+                            )}
+                        </td>
                         <td className="px-6 py-3 text-right">
                           <button onClick={() => item.tempId && removeFromPending(item.tempId)} className="text-gray-400 hover:text-red-500 transition-colors">
                             <X className="w-5 h-5" />
@@ -300,11 +359,24 @@ export default function StockPage() {
                     <div key={index} className="px-5 py-3 hover:bg-gray-50 transition-colors group">
                       <div className="flex justify-between items-start mb-1">
                         <h4 className="text-sm font-semibold text-gray-900">{item.name}</h4>
-                        <span className="text-sm font-bold text-green-600">฿{item.price.toLocaleString()}</span>
+                        <div className="flex flex-col items-end">
+                            <span className="text-sm font-bold text-green-600">฿{item.price.toLocaleString()}</span>
+                        </div>
                       </div>
                       <div className="flex justify-between items-end">
-                        <div className="text-xs text-gray-500">
-                          ปริมาณ: {item.quantity}
+                        <div className="text-xs text-gray-500 flex items-center gap-2">
+                          <span>ปริมาณ: {item.quantity}</span>
+                          {item.receipt && (
+                             <a 
+                               href={item.receipt} 
+                               target="_blank" 
+                               rel="noopener noreferrer"
+                               className="flex items-center text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 transition-colors"
+                             >
+                                <FileText className="w-3 h-3 mr-1" />
+                                ดูใบเสร็จ
+                             </a>
+                          )}
                         </div>
                         <div className="text-[10px] text-gray-400 flex items-center">
                           {item.date && new Date(item.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}

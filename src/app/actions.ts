@@ -1,6 +1,7 @@
 'use server';
 
 import { getSheet, getCachedRows, invalidateCache } from '@/lib/googleSheets';
+import { GoogleSpreadsheetRow } from 'google-spreadsheet';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { cookies } from 'next/headers';
@@ -35,19 +36,39 @@ export async function logout() {
 
 // ... (rest of the file)
 
+import { uploadToCloudinary } from '@/lib/cloudinary';
+
+// ... (existing imports)
+
 const stockSchema = z.object({
   name: z.string().min(1, 'ชื่อสินค้าจำเป็นต้องระบุ'),
   quantity: z.coerce.number().min(1, 'จำนวนต้องอย่างน้อย 1'),
   price: z.coerce.number().min(0, 'ราคาต้องไม่ติดลบ'),
   user: z.string().min(1, 'ชื่อผู้บันทึกจำเป็นต้องระบุ'),
+  receipt: z.string().optional(),
 });
 
 export async function addStockItem(prevState: unknown, formData: FormData) {
+  // Check for file
+  const file = formData.get('file') as File | null;
+  let receiptLink = '';
+
+  if (file && file.size > 0) {
+    try {
+      const url = await uploadToCloudinary(file);
+      receiptLink = url;
+    } catch (error) {
+       console.error("Upload failed", error);
+       // Continue without receipt or return error? Let's continue but warn.
+    }
+  }
+
   const validatedFields = stockSchema.safeParse({
     name: formData.get('name'),
     quantity: formData.get('quantity'),
     price: formData.get('price'),
     user: formData.get('user'),
+    receipt: receiptLink,
   });
 
   if (!validatedFields.success) {
@@ -57,16 +78,17 @@ export async function addStockItem(prevState: unknown, formData: FormData) {
     };
   }
 
-  const { name, quantity, price, user } = validatedFields.data;
+  const { name, quantity, price, user, receipt } = validatedFields.data;
 
   try {
-    const sheet = await getSheet('Stock', ['name', 'quantity', 'price', 'user', 'date']);
+    const sheet = await getSheet('Stock', ['name', 'quantity', 'price', 'user', 'date', 'receipt']);
     await sheet.addRow({
       name,
       quantity,
       price,
       user,
       date: new Date().toISOString(),
+      receipt: receipt || '',
     });
 
     invalidateCache('Stock'); // Invalidate cache
@@ -89,7 +111,7 @@ const bulkStockSchema = z.object({
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid JSON' });
       return z.NEVER;
     }
-  }).pipe(z.array(stockSchema)),
+  }).pipe(z.array(stockSchema.extend({ tempId: z.any().optional() }))), // Allow tempId in input
 });
 
 export async function addMultipleStockItems(prevState: unknown, formData: FormData) {
@@ -107,17 +129,39 @@ export async function addMultipleStockItems(prevState: unknown, formData: FormDa
   const { items } = validatedFields.data;
 
   try {
-    const sheet = await getSheet('Stock', ['name', 'quantity', 'price', 'user', 'date']);
+    const sheet = await getSheet('Stock', ['name', 'quantity', 'price', 'user', 'date', 'receipt']);
     const date = new Date().toISOString();
+    
+    // Process uploads for each item
+    const rowsToAdd = await Promise.all(items.map(async (item, index) => {
+       let receiptLink = '';
+       // Check if there is a file matching this item index
+       // The frontend must append files as 'file_0', 'file_1', etc. based on the ARRAY INDEX.
+       // However, the 'items' array here corresponds directly to the JSON sent.
+       // We need to trust the index alignment.
+       const file = formData.get(`file_${index}`) as File | null;
+       
+       if (file && file.size > 0) {
+          try {
+             const url = await uploadToCloudinary(file);
+             receiptLink = url;
+          } catch(e) {
+             console.error(`Failed to upload file for item ${index}`, e);
+          }
+       }
+
+       return {
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          user: item.user,
+          date,
+          receipt: receiptLink
+       };
+    }));
 
     // Add all rows
-    await sheet.addRows(items.map(item => ({
-      name: item.name,
-      quantity: item.quantity,
-      price: item.price,
-      user: item.user,
-      date,
-    })));
+    await sheet.addRows(rowsToAdd);
 
     invalidateCache('Stock');
     revalidatePath('/stock');
@@ -132,12 +176,13 @@ export async function getStockItems() {
   try {
     const rows = await getCachedRows('Stock', ['name', 'quantity', 'price', 'user', 'date']);
     // Sort by date desc
-    return rows.map(row => ({
+    return rows.map((row: GoogleSpreadsheetRow) => ({
       name: row.get('name') as string,
       quantity: Number(row.get('quantity')),
       price: Number(row.get('price')),
       date: row.get('date') as string,
       user: row.get('user') as string,
+      receipt: row.get('receipt') as string | undefined,
     })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch (error) {
     console.error('Failed to fetch stock items:', error);
@@ -148,7 +193,7 @@ export async function getStockItems() {
 export async function getStockNames() {
   try {
     const rows = await getCachedRows('Stock', ['name']);
-    const names = new Set(rows.map(row => row.get('name')));
+    const names = new Set(rows.map((row: GoogleSpreadsheetRow) => row.get('name')));
     return Array.from(names).filter(Boolean).sort();
   } catch (error) {
     console.error('Failed to fetch stock names:', error);
@@ -268,7 +313,7 @@ export async function deleteMenuItem(name: string) {
 export async function getMenuItems() {
   try {
     const rows = await getCachedRows('Menu', ['name', 'price', 'ingredients', 'date']);
-    return rows.map(row => {
+    return rows.map((row: GoogleSpreadsheetRow) => {
       const ingredientsRaw = row.get('ingredients');
       let ingredients = [];
       try {
@@ -376,7 +421,7 @@ export async function getDashboardStats(
     };
 
     // Process Orders
-    rows.forEach(row => {
+    rows.forEach((row: GoogleSpreadsheetRow) => {
       if (isDateInFilter(row.get('date'))) {
         totalSales += Number(row.get('totalPrice'));
         totalCost += Number(row.get('totalCost'));
@@ -406,7 +451,7 @@ export async function getDashboardStats(
     });
 
     // Process Stock Expenditure
-    stockRows.forEach(row => {
+    stockRows.forEach((row: GoogleSpreadsheetRow) => {
       if (isDateInFilter(row.get('date'))) {
         totalStockExpenditure += Number(row.get('price'));
       }

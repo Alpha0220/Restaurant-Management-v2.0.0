@@ -1,4 +1,4 @@
-import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { GoogleSpreadsheet, GoogleSpreadsheetRow } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 
 if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_SPREADSHEET_ID) {
@@ -43,10 +43,14 @@ export async function getSheet(title: string, headerValues: string[]) {
 }
 
 // Row Caching
-let rowsCache: Record<string, { rows: any[], timestamp: number }> = {};
+interface CachedRows {
+  rows: GoogleSpreadsheetRow[];
+  timestamp: number;
+}
+const rowsCache: Record<string, CachedRows> = {};
 const DATA_CACHE_TTL = 30000; // 30 seconds
 
-export async function getCachedRows(title: string, headerValues: string[]) {
+export async function getCachedRows(title: string, headerValues: string[]): Promise<GoogleSpreadsheetRow[]> {
   const now = Date.now();
   if (rowsCache[title] && (now - rowsCache[title].timestamp < DATA_CACHE_TTL)) {
     return rowsCache[title].rows;
