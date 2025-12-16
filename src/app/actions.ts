@@ -408,7 +408,7 @@ export async function getDashboardStats(
     let totalCost = 0; // Cost of goods sold (ingredients used)
     let totalStockExpenditure = 0; // Money spent on buying stock
     const itemSales: Record<string, { quantity: number, sales: number }> = {};
-    const orders: { date: string; items: { name: string; quantity: number; price: number }[]; totalPrice: number }[] = [];
+    const orders: { date: string; items: { name: string; quantity: number; price: number }[]; totalPrice: number; totalCost: number }[] = [];
 
     // Helper to check if a date matches the filter
     const isDateInFilter = (dateStr: string) => {
@@ -449,6 +449,7 @@ export async function getDashboardStats(
           date: row.get('date'),
           items,
           totalPrice: Number(row.get('totalPrice')),
+          totalCost: Number(row.get('totalCost')),
         });
 
         items.forEach((item: { name: string; quantity: number; price: number }) => {
