@@ -45,24 +45,6 @@ interface DashboardStats {
 
 type FilterType = 'all' | 'day' | 'month' | 'year' | 'custom';
 
-interface FilterButtonProps {
-  type: FilterType;
-  label: string;
-  activeType: FilterType;
-  onClick: (type: FilterType) => void;
-}
-
-const FilterButton = ({ type, label, activeType, onClick }: FilterButtonProps) => (
-  <button
-    onClick={() => onClick(type)}
-    className={`flex-1 min-w-[70px] py-1.5 px-3 text-xs md:text-sm font-medium rounded-md transition-colors ${activeType === type
-      ? 'bg-blue-600 text-white shadow-sm'
-      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-      }`}
-  >
-    {label}
-  </button>
-);
 
 type ViewType = 'sales' | 'topItems';
 
@@ -76,7 +58,7 @@ export default function DashboardPage() {
     itemSales: {},
     orders: []
   });
-  const [filterType, setFilterType] = useState<FilterType>('month');
+  const [filterType, setFilterType] = useState<FilterType>('day');
   const [dateValue, setDateValue] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -100,9 +82,9 @@ export default function DashboardPage() {
   // Initialize date on mount
   useEffect(() => {
     const now = new Date();
-    // Default is 'month'
+    // Default is 'day'
     // eslint-disable-next-line
-    setDateValue(now.toISOString().slice(0, 7));
+    setDateValue(now.toISOString().split('T')[0]);
   }, []);
 
   useEffect(() => {
@@ -136,7 +118,7 @@ export default function DashboardPage() {
 
         {/* Header */}
         <div className="flex items-center space-x-2 md:space-x-3 mb-4 md:mb-6">
-          <div className="p-2 md:p-3 bg-blue-600 rounded-lg md:rounded-xl shadow-lg shadow-blue-200">
+          <div className="p-2 md:p-3 bg-slate-700 rounded-lg md:rounded-xl shadow-sm">
             <LayoutDashboard className="w-5 h-5 md:w-6 md:h-6 text-white" />
           </div>
           <div>
@@ -146,117 +128,96 @@ export default function DashboardPage() {
         </div>
 
         {/* Filters Panel */}
-        <div className="bg-white p-2.5 md:p-3 rounded-lg shadow-sm border border-gray-100">
+        <div className="bg-white p-2.5 md:p-3 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center mb-2 text-xs font-medium text-gray-600">
-            <Calendar className="w-3.5 h-3.5 mr-1.5 text-blue-500" />
+            <Calendar className="w-3.5 h-3.5 mr-1.5 text-gray-500" />
             ตัวกรองวันที่
           </div>
 
           <div className="space-y-2.5">
-            {/* Filter Buttons Scrollable on mobile */}
-            <div className="flex gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
-              {/* <FilterButton type="all" label="ทั้งหมด" activeType={filterType} onClick={handleFilterChange} /> */}
-              <FilterButton type="day" label="รายวัน" activeType={filterType} onClick={handleFilterChange} />
-              <FilterButton type="month" label="รายเดือน" activeType={filterType} onClick={handleFilterChange} />
-              {/* <FilterButton type="year" label="รายปี" activeType={filterType} onClick={handleFilterChange} /> */}
-              <FilterButton type="custom" label="กำหนดเอง" activeType={filterType} onClick={handleFilterChange} />
-            </div>
+            {/* Filter Type Dropdown + Date Input */}
+            <div className="flex gap-2 items-start">
+              {/* Dropdown for Filter Type */}
+              <select
+                value={filterType}
+                onChange={(e) => handleFilterChange(e.target.value as FilterType)}
+                className="w-32 md:w-40 bg-white border border-gray-300 rounded-md px-2.5 py-1.5 text-gray-800 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
+              >
+                <option value="day">รายวัน</option>
+                <option value="month">รายเดือน</option>
+                <option value="custom">กำหนดเอง</option>
+              </select>
 
-            {/* Date Inputs */}
-            {(filterType !== 'all') && (
-              <div className="bg-gray-50 p-2 rounded-md border border-gray-200 animate-fade-in">
-                {filterType !== 'custom' ? (
-                  <input
-                    type={filterType === 'day' ? 'date' : filterType === 'month' ? 'month' : 'number'}
-                    value={dateValue}
-                    onChange={(e) => setDateValue(e.target.value)}
-                    className="w-full bg-white border border-gray-300 rounded-md px-2.5 py-1.5 text-gray-800 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder={filterType === 'year' ? 'Ex: 2024' : ''}
-                  />
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] md:text-xs text-gray-500 mb-0.5 block">วันที่เริ่มต้น</label>
-                      <input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full bg-white border border-gray-300 rounded-md px-2.5 py-1.5 text-gray-800 text-xs md:text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] md:text-xs text-gray-500 mb-0.5 block">วันที่สิ้นสุด</label>
-                      <input
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full bg-white border border-gray-300 rounded-md px-2.5 py-1.5 text-gray-800 text-xs md:text-sm"
-                      />
-                    </div>
+              {/* Date Input */}
+              {filterType !== 'custom' && (
+                <input
+                  type={filterType === 'day' ? 'date' : 'month'}
+                  value={dateValue}
+                  onChange={(e) => setDateValue(e.target.value)}
+                  className="w-44 md:w-52 bg-white border border-gray-300 rounded-md px-2.5 py-1.5 text-gray-800 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              )}
+
+              {/* Custom Date Range - Inline */}
+              {filterType === 'custom' && (
+                <>
+                  <div>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      placeholder="วันที่เริ่มต้น"
+                      className="w-40 md:w-44 bg-white border border-gray-300 rounded-md px-2.5 py-1.5 text-gray-800 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
                   </div>
-                )}
-              </div>
-            )}
+                  <span className="text-gray-400 self-center">-</span>
+                  <div>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      placeholder="วันที่สิ้นสุด"
+                      className="w-40 md:w-44 bg-white border border-gray-300 rounded-md px-2.5 py-1.5 text-gray-800 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Key Metrics Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {/* Total Sales */}
-          <div className="bg-white p-3 md:p-5 rounded-xl md:rounded-2xl shadow-sm border border-blue-100 relative overflow-hidden group">
-            <div className="absolute right-0 top-0 p-2 md:p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              {/* <DollarSign className="w-12 h-12 md:w-16 md:h-16 text-blue-600" /> */}
-            </div>
-            <div className="relative z-10">
-              <p className="text-xs md:text-sm font-medium text-blue-600 mb-1 flex items-center">
-               ยอดขายรวม <ArrowUpRight className="w-2 h-2 md:w-3 md:h-3 ml-1" /> 
-              </p>
-              <h3 className="text-lg md:text-2xl font-bold text-gray-800">฿{stats.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-            </div>
-          </div>
-
-          {/* Gross Profit */}
-          <div className="bg-white p-3 md:p-5 rounded-xl md:rounded-2xl shadow-sm border border-green-100 relative overflow-hidden group">
-            <div className="absolute right-0 top-0 p-2 md:p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              {/* <TrendingUp className="w-12 h-12 md:w-16 md:h-16 text-green-600" /> */}
-            </div>
-            <div className="relative z-10">
-              <p className="text-xs md:text-sm font-medium text-green-600 mb-1 flex items-center">
-                กำไรขั้นต้น
-              </p>
-              <h3 className="text-lg md:text-2xl font-bold text-gray-800">฿{stats.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-              <p className="text-[10px] md:text-xs text-green-500 mt-1 hidden sm:block">ยอดขาย - ต้นทุนสินค้า (COGS)</p>
-            </div>
+          <div className="bg-emerald-50 p-4 md:p-5 rounded-xl shadow-sm border border-emerald-200 hover:shadow-md transition-shadow">
+            <p className="text-xs md:text-sm font-semibold text-emerald-700 mb-2 flex items-center">
+             💰 ยอดขายรวม <ArrowUpRight className="w-3 h-3 md:w-4 md:h-4 ml-1" /> 
+            </p>
+            <h3 className="text-xl md:text-2xl font-bold text-emerald-800">฿{stats.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           </div>
 
           {/* COGS */}
-          <div className="bg-white p-3 md:p-5 rounded-xl md:rounded-2xl shadow-sm border border-red-100 relative overflow-hidden group">
-            {/* <div className="absolute right-0 top-0 p-2 md:p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <ShoppingBag className="w-12 h-12 md:w-16 md:h-16 text-red-600" />
-            </div> */}
-            <div className="relative z-10">
-              <p className="text-xs md:text-sm font-medium text-red-600 mb-1 flex items-center">
-                ต้นทุนสินค้า
-              </p>
-              <h3 className="text-lg md:text-2xl font-bold text-gray-800">฿{stats.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-              <p className="text-[10px] md:text-xs text-red-400 mt-1 hidden sm:block">Cost of Goods Sold</p>
-            </div>
+          <div className="bg-orange-50 p-4 md:p-5 rounded-xl shadow-sm border border-orange-200 hover:shadow-md transition-shadow">
+            <p className="text-xs md:text-sm font-semibold text-orange-700 mb-2 flex items-center">
+              🍳 ต้นทุนต่อจาน
+            </p>
+            <h3 className="text-xl md:text-2xl font-bold text-orange-800">฿{stats.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           </div>
 
-          {/* Net Profit */}
-          <div className="bg-linear-to-br from-emerald-500 to-teal-600 p-3 md:p-5 rounded-xl md:rounded-2xl shadow-lg text-white relative overflow-hidden col-span-2 lg:col-span-1">
-            {/* <div className="absolute right-0 top-0 p-2 md:p-4 opacity-20">
-              <Wallet className="w-12 h-12 md:w-16 md:h-16 text-white" />
-            </div> */}
-            <div className="relative z-10">
-              <p className="text-xs md:text-sm font-medium text-emerald-100 mb-1 flex items-center">
-                กำไรสุทธิ
-              </p>
-              <h3 className="text-xl md:text-3xl font-bold">฿{stats.netProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-              <p className="text-[10px] md:text-xs text-emerald-100 mt-2 opacity-80">
-                ยอดขาย - รายจ่ายซื้อของเข้าร้าน (฿{stats.totalStockExpenditure.toLocaleString()})
-              </p>
-            </div>
+          {/* Stock Expenditure */}
+          <div className="bg-rose-50 p-4 md:p-5 rounded-xl shadow-sm border border-rose-200 hover:shadow-md transition-shadow">
+            <p className="text-xs md:text-sm font-semibold text-rose-700 mb-2 flex items-center">
+              📦 ยอดซื้อวัตถุดิบ
+            </p>
+            <h3 className="text-xl md:text-2xl font-bold text-rose-800">฿{stats.totalStockExpenditure.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+          </div>
+
+          {/* Gross Profit */}
+          <div className="bg-teal-600 p-4 md:p-5 rounded-xl shadow-sm border border-teal-500 text-white hover:shadow-md transition-shadow">
+            <p className="text-xs md:text-sm font-semibold text-teal-50 mb-2 flex items-center">
+              ✨ กำไร
+            </p>
+            <h3 className="text-xl md:text-2xl font-bold text-white">฿{stats.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           </div>
         </div>
 
@@ -267,8 +228,8 @@ export default function DashboardPage() {
               onClick={() => setViewType('sales')}
               className={`flex-1 py-2.5 md:py-3 px-2 md:px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-1 md:gap-2 text-sm md:text-base ${
                 viewType === 'sales'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-slate-700 text-white shadow-sm hover:bg-slate-800'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <Package className="w-4 h-4 md:w-5 md:h-5" />
@@ -279,8 +240,8 @@ export default function DashboardPage() {
               onClick={() => setViewType('topItems')}
               className={`flex-1 py-2.5 md:py-3 px-2 md:px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-1 md:gap-2 text-sm md:text-base ${
                 viewType === 'topItems'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-slate-700 text-white shadow-sm hover:bg-slate-800'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <ChefHat className="w-4 h-4 md:w-5 md:h-5" />
@@ -301,7 +262,7 @@ export default function DashboardPage() {
                       <th className="px-4 py-3 text-left whitespace-nowrap">วันที่</th>
                       <th className="px-4 py-3 text-left">รายการอาหาร</th>
                       <th className="px-4 py-3 text-right whitespace-nowrap">ยอดขาย</th>
-                      <th className="px-4 py-3 text-right whitespace-nowrap">ต้นทุน</th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap">ต้นทุนต่อจาน</th>
                       <th className="px-4 py-3 text-right whitespace-nowrap">กำไร</th>
                     </tr>
                   </thead>
@@ -422,7 +383,7 @@ export default function DashboardPage() {
                             </div>
                           </div>
                           <div className="text-center p-2 bg-red-50 rounded-lg">
-                            <div className="text-xs text-gray-600 mb-1">ต้นทุน</div>
+                            <div className="text-xs text-gray-600 mb-1">ต้นทุนต่อจาน</div>
                             <div className="text-sm font-bold text-red-600">
                               ฿{order.totalCost.toLocaleString(undefined, { 
                                 minimumFractionDigits: 2, 
@@ -478,10 +439,10 @@ export default function DashboardPage() {
                             <td className="px-4 py-3">
                               <span className={`
                                 inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold
-                                ${index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                                  index === 1 ? 'bg-gray-200 text-gray-700' :
-                                  index === 2 ? 'bg-orange-100 text-orange-700' : 
-                                  'bg-gray-100 text-gray-500'}
+                                ${index === 0 ? 'bg-amber-400 text-amber-900 shadow-sm' :
+                                  index === 1 ? 'bg-slate-300 text-slate-700 shadow-sm' :
+                                  index === 2 ? 'bg-orange-300 text-orange-800 shadow-sm' : 
+                                  'bg-gray-100 text-gray-600'}
                               `}>
                                 {index + 1}
                               </span>
@@ -518,11 +479,11 @@ export default function DashboardPage() {
                           <div className="flex items-center gap-3 flex-1">
                             {/* Rank Badge */}
                             <span className={`
-                              shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-base font-bold
-                              ${index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                                index === 1 ? 'bg-gray-200 text-gray-700' :
-                                index === 2 ? 'bg-orange-100 text-orange-700' : 
-                                'bg-gray-100 text-gray-500'}
+                              shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-base font-bold shadow-sm
+                              ${index === 0 ? 'bg-amber-400 text-amber-900' :
+                                index === 1 ? 'bg-slate-300 text-slate-700' :
+                                index === 2 ? 'bg-orange-300 text-orange-800' : 
+                                'bg-gray-100 text-gray-600'}
                             `}>
                               {index + 1}
                             </span>
