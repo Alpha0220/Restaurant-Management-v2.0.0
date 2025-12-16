@@ -21,6 +21,9 @@ export default function StockPage() {
   const [stockNames, setStockNames] = useState<string[]>([]);
   const [currentUser, setCurrentUser] = useState('');
 
+  // Filter State
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+
   // UI State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -42,16 +45,12 @@ export default function StockPage() {
 
   const loadStockIds = useCallback(async () => {
     const allItems = await getStockItems();
-    // Show all items or filter by today? User said "History to main area", implying all history or today's history list.
-    // The previous code filtered by today. I'll keep it as today for now but visual layout changes.
-    // Actually, "History" usually implies everything. Let's stick to the previous logic (Today's items) but displayed better.
-    const today = new Date().toISOString().split('T')[0];
-    const todaysItems = allItems.filter((item: StockItem) => {
+    const filteredItems = allItems.filter((item: StockItem) => {
       if (!item.date) return false;
-      return item.date.startsWith(today);
+      return item.date.startsWith(selectedDate);
     });
-    setStockItems(todaysItems);
-  }, []);
+    setStockItems(filteredItems);
+  }, [selectedDate]);
 
   useEffect(() => {
     // eslint-disable-next-line
@@ -338,101 +337,121 @@ export default function StockPage() {
 
         {/* History List (Full Width) */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b bg-gray-50 flex justify-between items-center">
-            <h3 className="font-semibold text-gray-800 flex items-center">
-              <Clock className="w-5 h-5 mr-2 text-gray-500" /> ประวัติการบันทึก (วันนี้)
-            </h3>
-            <span className="text-xs font-medium bg-gray-200 text-gray-700 px-3 py-1 rounded-full">{stockItems.length} รายการ</span>
+          {/* Filter Header */}
+          <div className="px-6 py-4 border-b bg-linear-to-r from-blue-50 to-gray-50">
+            <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+              <div className="flex flex-col md:flex-row gap-4 md:items-center flex-1">
+                {/* Date Picker */}
+                <div className="flex items-center gap-2">
+                  {/* <Clock className="w-5 h-5 text-gray-500" /> */}
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="px-3 py-2 text-gray-500 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                {/* Total Items */}
+                <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-gray-200">
+                  <span className="text-sm font-medium text-gray-600">รายการทั้งหมด:</span>
+                  <span className="text-lg font-bold text-blue-600">{stockItems.length}</span>
+                </div>
+
+                {/* Total Price */}
+                <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-gray-200">
+                  <span className="text-sm font-medium text-gray-600">ราคารวม:</span>
+                  <span className="text-lg font-bold text-green-600">
+                    {stockItems.reduce((sum, item) => sum + item.price, 0).toLocaleString()}
+                  </span>
+                  <span className="text-sm font-medium text-gray-600">บาท</span>
+                </div>
+              </div>
+            </div>
           </div>
           
           {stockItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <Clock className="w-12 h-12 mb-3 opacity-20" />
-              <p className="text-sm">ยังไม่มีรายการบันทึกวันนี้</p>
+              <p className="text-sm">ยังไม่มีรายการบันทึกในวันที่เลือก</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-               
-              {/* Desktop Table */}
-              <table className="hidden md:table min-w-full divide-y divide-gray-100">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">เวลา</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อวัตถุดิบ</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ปริมาณ</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">ราคา</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ไฟล์</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">ผู้บันทึก</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
-                    {groupedItems.map((group, groupIndex) => (
-                      group.map((item, itemIndex) => {
-                        const bgColor = groupIndex % 2 === 0 ? 'bg-white' : 'bg-gray-100';
-                        const hoverColor = groupIndex % 2 === 0 ? 'hover:bg-gray-100' : 'hover:bg-gray-200';
-                        return (
-                          <tr key={`${groupIndex}-${itemIndex}`} className={`${bgColor} ${hoverColor} transition-colors`}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                 {item.date && new Date(item.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.name}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.quantity}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600 text-right">฿{item.price.toLocaleString()}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {item.receipt ? (
-                                   <button 
-                                     onClick={() => setPreviewImage(item.receipt!)}
-                                     className="flex items-center text-blue-600 hover:text-blue-800 transition-colors"
-                                   >
-                                      <Eye className="w-4 h-4 mr-1" />
-                                      <span className="text-xs">ดูรูป</span>
-                                   </button>
-                                ) : (
-                                    <span className="text-gray-300">-</span>
-                                )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{item.user}</td>
-                          </tr>
-                        );
-                      })
-                    ))}
-                </tbody>
-              </table>
+            <div className="p-4 space-y-4">
+              {/* Group by receipt */}
+              {groupedItems.map((group, groupIndex) => {
+                const groupTotal = group.reduce((sum, item) => sum + item.price, 0);
+                const groupReceipt = group[0].receipt;
+                
+                return (
+                  <div key={groupIndex} className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    {/* Group Header - Only show on desktop */}
+                    <div className="hidden md:block bg-gray-50 px-4 py-2 border-b border-gray-200">
+                      <div className="grid grid-cols-6 text-xs font-medium text-gray-600 uppercase">
+                        <div>เวลา</div>
+                        <div>ชื่อวัตถุดิบ</div>
+                        <div>ปริมาณ</div>
+                        <div className="text-right">ราคา</div>
+                        <div className="text-right">ผู้บันทึก</div>
+                        <div></div>
+                      </div>
+                    </div>
 
-              {/* Mobile Card List */}
-              <div className="md:hidden divide-y divide-gray-100">
-                  {groupedItems.map((group, groupIndex) => (
-                    group.map((item, itemIndex) => {
-                      const bgColor = groupIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50';
-                      return (
-                        <div key={`${groupIndex}-${itemIndex}`} className={`p-4 flex flex-col gap-2 ${bgColor}`}>
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <div className="font-medium text-gray-900 text-base">{item.name}</div>
-                                    <div className="text-xs text-gray-500 mb-1">
-                                        {item.date && new Date(item.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} • {item.user}
-                                    </div>
-                                    <div className="text-sm text-gray-600">ปริมาณ: {item.quantity}</div>
-                                </div>
-                                <div className="flex flex-col items-end gap-2">
-                                    <div className="font-bold text-green-600 text-base">฿{item.price.toLocaleString()}</div>
-                                    {item.receipt && (
-                                       <button 
-                                         onClick={() => setPreviewImage(item.receipt!)}
-                                         className="flex items-center text-blue-600 bg-blue-50 px-2 py-1 rounded text-xs"
-                                       >
-                                          <Eye className="w-3 h-3 mr-1" />
-                                          ดูรูป
-                                       </button>
-                                    )}
-                                </div>
+                    {/* Group Items */}
+                    <div className="bg-white divide-y divide-gray-100">
+                      {group.map((item, itemIndex) => (
+                        <div key={itemIndex} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                          {/* Desktop View */}
+                          <div className="hidden md:grid md:grid-cols-6 md:items-center md:gap-4">
+                            <div className="text-sm text-gray-500">
+                              {item.date && new Date(item.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
                             </div>
-                        </div>
-                      );
-                    })
-                  ))}
-              </div>
+                            <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                            <div className="text-sm text-gray-600">{item.quantity}</div>
+                            <div className="text-sm font-semibold text-green-600 text-right">฿{item.price.toLocaleString()}</div>
+                            <div className="text-sm text-gray-500 text-right">{item.user}</div>
+                            <div></div>
+                          </div>
 
+                          {/* Mobile View */}
+                          <div className="md:hidden flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">{item.name}</div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {item.date && new Date(item.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} • {item.user}
+                              </div>
+                              <div className="text-sm text-gray-600 mt-1">ปริมาณ: {item.quantity}</div>
+                            </div>
+                            <div className="font-semibold text-green-600">฿{item.price.toLocaleString()}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Group Footer */}
+                    <div className="bg-linear-to-r from-gray-50 to-blue-50 px-4 py-3 border-t border-gray-200">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm font-medium text-gray-600">
+                            รวม <span className="font-bold text-blue-600">{group.length}</span> รายการ
+                          </span>
+                          <span className="text-sm font-medium text-gray-600">
+                            ราคารวม <span className="font-bold text-green-600 text-sm"> {groupTotal.toLocaleString()}</span> <span className="text-sm font-medium text-gray-600">บาท</span>
+                          </span>
+                        </div>
+                        {groupReceipt && (
+                          <button
+                            onClick={() => setPreviewImage(groupReceipt)}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+                          >
+                            <Eye className="w-4 h-4" />
+                            ดูรูปภาพ
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
