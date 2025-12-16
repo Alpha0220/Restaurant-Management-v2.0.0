@@ -16,6 +16,15 @@ interface StockItem {
   file?: File;
 }
 
+// Helper function to format quantity with appropriate unit
+const formatQuantity = (grams: number): string => {
+  if (grams >= 1000) {
+    const kilos = grams / 1000;
+    return `${kilos.toLocaleString()} กิโลกรัม`;
+  }
+  return `${grams.toLocaleString()} กรัม`;
+};
+
 export default function StockPage() {
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
   const [stockNames, setStockNames] = useState<string[]>([]);
@@ -32,8 +41,10 @@ export default function StockPage() {
   // Form State
   const [nameInput, setNameInput] = useState('');
   const [quantityInput, setQuantityInput] = useState('');
+  const [quantityUnit, setQuantityUnit] = useState('g'); // Default to grams
   const [priceInput, setPriceInput] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Refs for focus management
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -91,6 +102,7 @@ export default function StockPage() {
   const selectSuggestion = (name: string) => {
     setNameInput(name);
     setSuggestions([]);
+    setShowSuggestions(false);
   };
 
   const addToPendingList = (e?: React.FormEvent) => {
@@ -101,9 +113,14 @@ export default function StockPage() {
       return;
     }
 
+    // Convert to grams if unit is kg
+    const quantityInGrams = quantityUnit === 'kg' 
+      ? Number(quantityInput) * 1000 
+      : Number(quantityInput);
+
     const newItem: StockItem = {
       name: nameInput,
-      quantity: Number(quantityInput),
+      quantity: quantityInGrams,
       price: Number(priceInput),
       user: currentUser,
       tempId: Date.now(),
@@ -114,6 +131,7 @@ export default function StockPage() {
     // Reset form (keep modal open)
     setNameInput('');
     setQuantityInput('');
+    setQuantityUnit('g'); // Reset to grams
     setPriceInput('');
     setMessage({ text: `เพิ่ม "${nameInput}" แล้ว! พร้อมเพิ่มรายการถัดไป`, type: 'success' });
     
@@ -237,7 +255,7 @@ export default function StockPage() {
                 {pendingItems.map((item) => (
                   <tr key={item.tempId} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-3 text-sm font-medium text-gray-900">{item.name}</td>
-                    <td className="px-6 py-3 text-sm text-gray-600">{item.quantity}</td>
+                    <td className="px-6 py-3 text-sm text-gray-600">{formatQuantity(item.quantity)}</td>
                     <td className="px-6 py-3 text-sm text-gray-900 font-medium">฿{item.price.toLocaleString()}</td>
                     <td className="px-6 py-3 text-right">
                       <button onClick={() => item.tempId && removeFromPending(item.tempId)} className="text-gray-400 hover:text-red-500 transition-colors bg-gray-100 p-1 rounded-full">
@@ -256,7 +274,7 @@ export default function StockPage() {
                   <div key={item.tempId} className="p-4 flex justify-between items-center">
                      <div>
                         <div className="font-medium text-gray-900 text-base">{item.name}</div>
-                        <div className="text-gray-500 text-sm">ปริมาณ: {item.quantity} | ราคา: ฿{item.price.toLocaleString()}</div>
+                        <div className="text-gray-500 text-sm">ปริมาณ: {formatQuantity(item.quantity)} | ราคา: ฿{item.price.toLocaleString()}</div>
                      </div>
                      <button onClick={() => item.tempId && removeFromPending(item.tempId)} className="text-gray-400 hover:text-red-500 p-2">
                         <X className="w-5 h-5" />
@@ -406,7 +424,7 @@ export default function StockPage() {
                               {item.date && new Date(item.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
                             </div>
                             <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                            <div className="text-sm text-gray-600">{item.quantity}</div>
+                            <div className="text-sm text-gray-600">{formatQuantity(item.quantity)}</div>
                             <div className="text-sm font-semibold text-green-600 text-right">฿{item.price.toLocaleString()}</div>
                             <div className="text-sm text-gray-500 text-right">{item.user}</div>
                             <div></div>
@@ -419,7 +437,7 @@ export default function StockPage() {
                               <div className="text-xs text-gray-500 mt-1">
                                 {item.date && new Date(item.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} • {item.user}
                               </div>
-                              <div className="text-sm text-gray-600 mt-1">ปริมาณ: {item.quantity}</div>
+                              <div className="text-sm text-gray-600 mt-1">ปริมาณ: {formatQuantity(item.quantity)}</div>
                             </div>
                             <div className="font-semibold text-green-600">฿{item.price.toLocaleString()}</div>
                           </div>
@@ -481,14 +499,20 @@ export default function StockPage() {
                   type="text"
                   value={nameInput}
                   onChange={handleNameChange}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   autoComplete="off"
                   className="w-full rounded-lg border-gray-300 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border text-base"
                   placeholder="พิมพ์ชื่อ..."
                 />
-                {suggestions.length > 0 && (
-                  <ul className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-xl max-h-40 overflow-auto">
+                {showSuggestions && suggestions.length > 0 && (
+                  <ul className="absolute z-50 w-full text-gray-500 bg-white border border-gray-200 rounded-lg mt-1 shadow-xl max-h-40 overflow-auto">
                     {suggestions.map((name, index) => (
-                      <li key={index} onClick={() => selectSuggestion(name)} className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-50 last:border-0">
+                      <li 
+                        key={index} 
+                        onMouseDown={() => selectSuggestion(name)} 
+                        className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-50 last:border-0"
+                      >
                         {name}
                       </li>
                     ))}
@@ -496,32 +520,41 @@ export default function StockPage() {
                 )}
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">ปริมาณ</label>
-                    <input
-                      type="number"
-                      value={quantityInput}
-                      onChange={(e) => setQuantityInput(e.target.value)}
-                      min="0.1"
-                      step="0.1"
-                      className="w-full rounded-lg border-gray-300 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border text-base"
-                      placeholder="0.0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">ราคา</label>
-                    <input
-                      type="number"
-                      value={priceInput}
-                      onChange={(e) => setPriceInput(e.target.value)}
-                      onKeyDown={handlePriceKeyDown}
-                      min="0"
-                      step="0.01"
-                      className="w-full rounded-lg border-gray-300 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border text-base"
-                      placeholder="0.00"
-                    />
-                  </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ปริมาณ</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={quantityInput}
+                    onChange={(e) => setQuantityInput(e.target.value)}
+                    min="0.1"
+                    step="0.1"
+                    className="flex-1 rounded-lg border-gray-300 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border text-base"
+                    placeholder="0"
+                  />
+                  <select
+                    value={quantityUnit}
+                    onChange={(e) => setQuantityUnit(e.target.value)}
+                    className="w-32 rounded-lg border-gray-300 text-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border text-base"
+                  >
+                    <option value="g">กรัม</option>
+                    <option value="kg">กิโลกรัม</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ราคา (บาท)</label>
+                <input
+                  type="number"
+                  value={priceInput}
+                  onChange={(e) => setPriceInput(e.target.value)}
+                  onKeyDown={handlePriceKeyDown}
+                  min="0"
+                  step="0.01"
+                  className="w-full rounded-lg border-gray-300 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border text-base"
+                  placeholder="0.00"
+                />
               </div>
             </div>
 
