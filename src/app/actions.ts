@@ -185,9 +185,10 @@ export async function addMultipleStockItems(prevState: unknown, formData: FormDa
 
 export async function getStockItems() {
   try {
-    const rows = await getCachedRows('Stock', ['name', 'quantity', 'price', 'user', 'date']);
-    // Sort by date desc
-    return rows.map((row: GoogleSpreadsheetRow) => ({
+    const rows = await getCachedRows('Stock', ['name', 'quantity', 'price', 'user', 'date', 'receipt']);
+    // Sort by date desc and include row index
+    return rows.map((row: GoogleSpreadsheetRow, index: number) => ({
+      rowIndex: index,
       name: row.get('name') as string,
       quantity: Number(row.get('quantity')),
       price: Number(row.get('price')),
@@ -198,6 +199,73 @@ export async function getStockItems() {
   } catch (error) {
     console.error('Failed to fetch stock items:', error);
     return [];
+  }
+}
+
+export async function updateStockItem(prevState: unknown, formData: FormData) {
+  const originalDate = formData.get('originalDate') as string;
+  const originalName = formData.get('originalName') as string;
+  const originalUser = formData.get('originalUser') as string;
+  
+  const file = formData.get('file') as File | null;
+  let receiptLink = formData.get('existingReceipt') as string || '';
+
+  if (file && file.size > 0) {
+    try {
+      const url = await uploadToCloudinary(file);
+      receiptLink = url;
+    } catch (error) {
+       console.error("Upload failed", error);
+    }
+  }
+
+  const validatedFields = stockSchema.safeParse({
+    name: formData.get('name'),
+    quantity: formData.get('quantity'),
+    price: formData.get('price'),
+    user: formData.get('user'),
+    receipt: receiptLink,
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล',
+    };
+  }
+
+  const { name, quantity, price, user, receipt } = validatedFields.data;
+
+  try {
+    const sheet = await getSheet('Stock', ['name', 'quantity', 'price', 'user', 'date', 'receipt']);
+    const rows = await sheet.getRows();
+    
+    // Find the row to update by matching original data
+    const rowToUpdate = rows.find((row: GoogleSpreadsheetRow) => 
+      row.get('date') === originalDate && 
+      row.get('name') === originalName && 
+      row.get('user') === originalUser
+    );
+
+    if (!rowToUpdate) {
+      return { message: 'ไม่พบรายการที่ต้องการแก้ไข' };
+    }
+
+    // Update the row
+    rowToUpdate.set('name', name);
+    rowToUpdate.set('quantity', quantity);
+    rowToUpdate.set('price', price);
+    rowToUpdate.set('user', user);
+    rowToUpdate.set('receipt', receipt);
+    
+    await rowToUpdate.save();
+
+    invalidateCache('Stock');
+    revalidatePath('/stock');
+    return { success: true, message: 'อัพเดทรายการเรียบร้อยแล้ว!' };
+  } catch (error) {
+    console.error('Database Error:', error);
+    return { message: 'เกิดข้อผิดพลาดในการอัพเดทข้อมูล' };
   }
 }
 

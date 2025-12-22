@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState, useTransition, useRef, useCallback } from 'react';
-import { addMultipleStockItems, getStockItems, getStockNames } from '@/app/actions';
-import { Plus, Clock, Save, X, ShoppingCart, Upload, Eye } from 'lucide-react';
+import { addMultipleStockItems, getStockItems, getStockNames, updateStockItem } from '@/app/actions';
+import { Plus, Clock, Save, X, ShoppingCart, Upload, Eye, Edit } from 'lucide-react';
 
 interface StockItem {
   _id?: string;
   tempId?: number;
+  rowIndex?: number;
   name: string;
   quantity: number;
   price: number;
@@ -35,6 +36,8 @@ export default function StockPage() {
 
   // UI State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<StockItem | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [batchFile, setBatchFile] = useState<File | null>(null); // New batch file state
 
@@ -45,6 +48,14 @@ export default function StockPage() {
   const [priceInput, setPriceInput] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Edit Form State
+  const [editNameInput, setEditNameInput] = useState('');
+  const [editQuantityInput, setEditQuantityInput] = useState('');
+  const [editQuantityUnit, setEditQuantityUnit] = useState('g');
+  const [editPriceInput, setEditPriceInput] = useState('');
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Refs for focus management
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -64,7 +75,6 @@ export default function StockPage() {
   }, [selectedDate]);
 
   useEffect(() => {
-    // eslint-disable-next-line
     loadStockIds();
     getStockNames().then(setStockNames);
 
@@ -180,6 +190,75 @@ export default function StockPage() {
   const handlePriceKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       addToPendingList();
+    }
+  };
+
+  // Handle Edit Item
+  const handleEditItem = (item: StockItem) => {
+    setEditingItem(item);
+    setEditNameInput(item.name);
+    // Convert quantity back to appropriate unit
+    if (item.quantity >= 1000) {
+      setEditQuantityInput((item.quantity / 1000).toString());
+      setEditQuantityUnit('kg');
+    } else {
+      setEditQuantityInput(item.quantity.toString());
+      setEditQuantityUnit('g');
+    }
+    setEditPriceInput(item.price.toString());
+    setEditFile(null);
+    setIsEditModalOpen(true);
+  };
+
+  // Handle Update Submit
+  const handleUpdateSubmit = async () => {
+    if (!editingItem) return;
+    
+    const quantityValue = parseFloat(editQuantityInput);
+    const priceValue = parseFloat(editPriceInput);
+    
+    if (isNaN(quantityValue) || quantityValue <= 0 || isNaN(priceValue) || priceValue < 0) {
+      setMessage({ text: 'กรุณากรอกข้อมูลให้ครบถ้วน', type: 'error' });
+      setTimeout(() => setMessage(null), 2000);
+      return;
+    }
+
+    setIsUpdating(true);
+
+    const formData = new FormData();
+    formData.append('originalDate', editingItem.date || '');
+    formData.append('originalName', editingItem.name);
+    formData.append('originalUser', editingItem.user);
+    formData.append('name', editNameInput);
+    formData.append('quantity', (editQuantityUnit === 'kg' ? quantityValue * 1000 : quantityValue).toString());
+    formData.append('price', priceValue.toString());
+    formData.append('user', editingItem.user);
+    formData.append('existingReceipt', editingItem.receipt || '');
+    
+    if (editFile) {
+      formData.append('file', editFile);
+    }
+
+    try {
+      const result = await updateStockItem(null, formData);
+      
+      if (result?.success) {
+        setMessage({ text: result.message, type: 'success' });
+        setIsEditModalOpen(false);
+        setEditingItem(null);
+        loadStockIds();
+        getStockNames().then(setStockNames);
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        setMessage({ text: result?.message || 'เกิดข้อผิดพลาด', type: 'error' });
+        setTimeout(() => setMessage(null), 3000);
+      }
+    } catch (error) {
+      console.error('Update error:', error);
+      setMessage({ text: 'เกิดข้อผิดพลาดในการอัพเดท', type: 'error' });
+      setTimeout(() => setMessage(null), 3000);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -410,7 +489,7 @@ export default function StockPage() {
                         <div>ปริมาณ</div>
                         <div className="text-right">ราคา</div>
                         <div className="text-right">ผู้บันทึก</div>
-                        <div></div>
+                        <div className="text-right">จัดการ</div>
                       </div>
                     </div>
 
@@ -427,19 +506,36 @@ export default function StockPage() {
                             <div className="text-sm text-gray-600">{formatQuantity(item.quantity)}</div>
                             <div className="text-sm font-semibold text-green-600 text-right">฿{item.price.toLocaleString()}</div>
                             <div className="text-sm text-gray-500 text-right">{item.user}</div>
-                            <div></div>
+                            <div className="text-right">
+                              <button
+                                onClick={() => handleEditItem(item)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                                แก้ไข
+                              </button>
+                            </div>
                           </div>
 
                           {/* Mobile View */}
-                          <div className="md:hidden flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900">{item.name}</div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                {item.date && new Date(item.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} • {item.user}
+                          <div className="md:hidden">
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900">{item.name}</div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {item.date && new Date(item.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} • {item.user}
+                                </div>
+                                <div className="text-sm text-gray-600 mt-1">ปริมาณ: {formatQuantity(item.quantity)}</div>
                               </div>
-                              <div className="text-sm text-gray-600 mt-1">ปริมาณ: {formatQuantity(item.quantity)}</div>
+                              <div className="font-semibold text-green-600">฿{item.price.toLocaleString()}</div>
                             </div>
-                            <div className="font-semibold text-green-600">฿{item.price.toLocaleString()}</div>
+                            <button
+                              onClick={() => handleEditItem(item)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                              แก้ไข
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -577,6 +673,141 @@ export default function StockPage() {
                >
                   + เพิ่มรายการ
                </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Item Modal */}
+      {isEditModalOpen && editingItem && (
+        <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm flex items-center justify-center animate-fade-in p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-scale-in overflow-hidden">
+            <div className="bg-blue-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center">
+                <Edit className="w-5 h-5 mr-2 text-blue-600" /> แก้ไขรายการ
+              </h2>
+              <button 
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingItem(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 bg-white p-1 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อวัตถุดิบ</label>
+                <input
+                  type="text"
+                  value={editNameInput}
+                  onChange={(e) => setEditNameInput(e.target.value)}
+                  className="w-full rounded-lg border-gray-300 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border text-base"
+                  placeholder="ชื่อวัตถุดิบ"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ปริมาณ</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editQuantityInput}
+                    onChange={(e) => setEditQuantityInput(e.target.value)}
+                    className="w-full rounded-lg border-gray-300 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border text-base"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">หน่วย</label>
+                  <select
+                    value={editQuantityUnit}
+                    onChange={(e) => setEditQuantityUnit(e.target.value)}
+                    className="w-full rounded-lg border-gray-300 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border text-base"
+                  >
+                    <option value="g">กรัม (g)</option>
+                    <option value="kg">กิโลกรัม (kg)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ราคา (บาท)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editPriceInput}
+                  onChange={(e) => setEditPriceInput(e.target.value)}
+                  className="w-full rounded-lg border-gray-300 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border text-base"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  รูปใบเสร็จ {editingItem.receipt && <span className="text-green-600">(มีรูปอยู่แล้ว)</span>}
+                </label>
+                <div className="flex items-center gap-3">
+                  <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-50 text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-100 cursor-pointer transition-colors">
+                    <Upload className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      {editFile ? editFile.name : 'อัพโหลดรูปใหม่'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setEditFile(e.target.files?.[0] || null)}
+                      className="hidden"
+                    />
+                  </label>
+                  {(editFile || editingItem.receipt) && (
+                    <button
+                      onClick={() => {
+                        if (editingItem.receipt) {
+                          setPreviewImage(editingItem.receipt);
+                        }
+                      }}
+                      className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                      title="ดูรูปปัจจุบัน"
+                    >
+                      <Eye className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">อัพโหลดรูปใหม่หากต้องการเปลี่ยน</p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingItem(null);
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleUpdateSubmit}
+                disabled={isUpdating}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUpdating ? (
+                  <>
+                    <Clock className="w-4 h-4 animate-spin" />
+                    กำลังอัพเดท...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    บันทึกการแก้ไข
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
