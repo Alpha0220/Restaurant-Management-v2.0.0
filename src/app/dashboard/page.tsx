@@ -38,6 +38,8 @@ interface DashboardStats {
   totalCost: number;
   grossProfit: number;
   totalStockExpenditure: number;
+  totalIncome: number;
+  totalExpense: number;
   netProfit: number;
   itemSales: Record<string, ItemSaleData>;
   orders: Order[];
@@ -54,6 +56,8 @@ export default function DashboardPage() {
     totalCost: 0,
     grossProfit: 0,
     totalStockExpenditure: 0,
+    totalIncome: 0,
+    totalExpense: 0,
     netProfit: 0,
     itemSales: {},
     orders: []
@@ -122,7 +126,7 @@ export default function DashboardPage() {
             <LayoutDashboard className="w-5 h-5 md:w-6 md:h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-800">Dashboard</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800">รายงานรวม</h1>
             <p className="text-gray-500 text-xs md:text-sm">สรุปผลการดำเนินงานของร้าน</p>
           </div>
         </div>
@@ -187,37 +191,58 @@ export default function DashboardPage() {
         </div>
 
         {/* Key Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 md:gap-4">
+          {/* Row 1: Primary Metrics - Emerald Gradient */}
           {/* Total Sales */}
-          <div className="bg-emerald-50 p-4 md:p-5 rounded-xl shadow-sm border border-emerald-200 hover:shadow-md transition-shadow">
+          <div className="lg:col-span-2 bg-emerald-50 p-4 md:p-5 rounded-xl shadow-sm border border-emerald-200 hover:shadow-md transition-shadow">
             <p className="text-xs md:text-sm font-semibold text-emerald-700 mb-2 flex items-center">
-             💰 ยอดขายรวม <ArrowUpRight className="w-3 h-3 md:w-4 md:h-4 ml-1" /> 
+              💰 ยอดขายรวม <ArrowUpRight className="w-3 h-3 md:w-4 md:h-4 ml-1" />
             </p>
             <h3 className="text-xl md:text-2xl font-bold text-emerald-800">฿{stats.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           </div>
 
           {/* COGS */}
-          <div className="bg-orange-50 p-4 md:p-5 rounded-xl shadow-sm border border-orange-200 hover:shadow-md transition-shadow">
-            <p className="text-xs md:text-sm font-semibold text-orange-700 mb-2 flex items-center">
+          <div className="lg:col-span-2 bg-emerald-200 p-4 md:p-5 rounded-xl shadow-sm border border-emerald-300 hover:shadow-md transition-shadow">
+            <p className="text-xs md:text-sm font-semibold text-emerald-800 mb-2 flex items-center">
               🍳 ต้นทุนต่อจาน
             </p>
-            <h3 className="text-xl md:text-2xl font-bold text-orange-800">฿{stats.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-          </div>
-
-          {/* Stock Expenditure */}
-          <div className="bg-rose-50 p-4 md:p-5 rounded-xl shadow-sm border border-rose-200 hover:shadow-md transition-shadow">
-            <p className="text-xs md:text-sm font-semibold text-rose-700 mb-2 flex items-center">
-              📦 ยอดซื้อวัตถุดิบ
-            </p>
-            <h3 className="text-xl md:text-2xl font-bold text-rose-800">฿{stats.totalStockExpenditure.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+            <h3 className="text-xl md:text-2xl font-bold text-emerald-900">฿{stats.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           </div>
 
           {/* Gross Profit */}
-          <div className="bg-teal-600 p-4 md:p-5 rounded-xl shadow-sm border border-teal-500 text-white hover:shadow-md transition-shadow">
-            <p className="text-xs md:text-sm font-semibold text-teal-50 mb-2 flex items-center">
+          <div className="lg:col-span-2 bg-emerald-600 p-4 md:p-5 rounded-xl shadow-sm border border-emerald-500 text-white hover:shadow-md transition-shadow">
+            <p className="text-xs md:text-sm font-semibold text-emerald-50 mb-2 flex items-center">
               ✨ กำไร
             </p>
             <h3 className="text-xl md:text-2xl font-bold text-white">฿{stats.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+          </div>
+
+          {/* Row 2: Secondary Metrics - Indigo Gradient */}
+          {/* Other Income */}
+          <div className="lg:col-span-2 bg-indigo-50 p-4 md:p-5 rounded-xl shadow-sm border border-indigo-200 hover:shadow-md transition-shadow">
+            <p className="text-xs md:text-sm font-semibold text-indigo-700 mb-2 flex items-center">
+              📈 รายรับอื่น ๆ
+            </p>
+            <h3 className="text-xl md:text-2xl font-bold text-indigo-800">฿{stats.totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+          </div>
+
+          {/* Other Expense */}
+          <div className="lg:col-span-2 bg-indigo-200 p-4 md:p-5 rounded-xl shadow-sm border border-indigo-300 hover:shadow-md transition-shadow">
+            <p className="text-xs md:text-sm font-semibold text-indigo-800 mb-2 flex items-center">
+              📉 รายจ่ายอื่น ๆ
+            </p>
+            <h3 className="text-xl md:text-2xl font-bold text-indigo-900">฿{stats.totalExpense.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+          </div>
+
+          {/* Other Net (Income - Expense) */}
+          <div className="lg:col-span-2 bg-indigo-600 p-4 md:p-5 rounded-xl shadow-sm border border-indigo-500 text-white hover:shadow-md transition-shadow">
+            <p className="text-xs md:text-sm font-semibold text-indigo-50 mb-2 flex items-center">
+              ⚖️ ผลต่างรายรับ-จ่ายอื่น
+            </p>
+            <h3 className="text-xl md:text-2xl font-bold text-white">
+              {(stats.totalIncome - stats.totalExpense) >= 0 ? '+' : '-'}
+              ฿{Math.abs(stats.totalIncome - stats.totalExpense).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </h3>
           </div>
         </div>
 
@@ -226,11 +251,10 @@ export default function DashboardPage() {
           <div className="flex gap-2 md:gap-3">
             <button
               onClick={() => setViewType('sales')}
-              className={`flex-1 py-2.5 md:py-3 px-2 md:px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-1 md:gap-2 text-sm md:text-base ${
-                viewType === 'sales'
-                  ? 'bg-slate-700 text-white shadow-sm hover:bg-slate-800'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`flex-1 py-2.5 md:py-3 px-2 md:px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-1 md:gap-2 text-sm md:text-base ${viewType === 'sales'
+                ? 'bg-slate-700 text-white shadow-sm hover:bg-slate-800'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               <Package className="w-4 h-4 md:w-5 md:h-5" />
               <span className="hidden sm:inline">ประวัติการขายล่าสุด</span>
@@ -238,11 +262,10 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setViewType('topItems')}
-              className={`flex-1 py-2.5 md:py-3 px-2 md:px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-1 md:gap-2 text-sm md:text-base ${
-                viewType === 'topItems'
-                  ? 'bg-slate-700 text-white shadow-sm hover:bg-slate-800'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`flex-1 py-2.5 md:py-3 px-2 md:px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-1 md:gap-2 text-sm md:text-base ${viewType === 'topItems'
+                ? 'bg-slate-700 text-white shadow-sm hover:bg-slate-800'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               <ChefHat className="w-4 h-4 md:w-5 md:h-5" />
               เมนูทั้งหมด
@@ -274,16 +297,16 @@ export default function DashboardPage() {
                           <tr key={idx} className="hover:bg-gray-50 transition-colors">
                             <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                               <div className="font-medium text-gray-800">
-                                {new Date(order.date).toLocaleDateString('th-TH', { 
-                                  day: '2-digit', 
-                                  month: '2-digit', 
-                                  year: 'numeric' 
+                                {new Date(order.date).toLocaleDateString('th-TH', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric'
                                 })}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {new Date(order.date).toLocaleTimeString('th-TH', { 
-                                  hour: '2-digit', 
-                                  minute: '2-digit' 
+                                {new Date(order.date).toLocaleTimeString('th-TH', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
                                 })}
                               </div>
                             </td>
@@ -297,21 +320,21 @@ export default function DashboardPage() {
                               </div>
                             </td>
                             <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                              ฿{order.totalPrice.toLocaleString(undefined, { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 2 
+                              ฿{order.totalPrice.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
                               })}
                             </td>
                             <td className="px-4 py-3 text-right text-red-600 font-medium">
-                              ฿{order.totalCost.toLocaleString(undefined, { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 2 
+                              ฿{order.totalCost.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
                               })}
                             </td>
                             <td className="px-4 py-3 text-right font-bold text-green-600">
-                              ฿{profit.toLocaleString(undefined, { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 2 
+                              ฿{profit.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
                               })}
                             </td>
                           </tr>
@@ -343,16 +366,16 @@ export default function DashboardPage() {
                             </div>
                             <div>
                               <div className="font-semibold text-gray-800 text-sm">
-                                {new Date(order.date).toLocaleDateString('th-TH', { 
-                                  day: '2-digit', 
-                                  month: '2-digit', 
-                                  year: 'numeric' 
+                                {new Date(order.date).toLocaleDateString('th-TH', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric'
                                 })}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {new Date(order.date).toLocaleTimeString('th-TH', { 
-                                  hour: '2-digit', 
-                                  minute: '2-digit' 
+                                {new Date(order.date).toLocaleTimeString('th-TH', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
                                 })}
                               </div>
                             </div>
@@ -376,27 +399,27 @@ export default function DashboardPage() {
                           <div className="text-center p-2 bg-blue-50 rounded-lg">
                             <div className="text-xs text-gray-600 mb-1">ยอดขาย</div>
                             <div className="text-sm font-bold text-gray-900">
-                              ฿{order.totalPrice.toLocaleString(undefined, { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 2 
+                              ฿{order.totalPrice.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
                               })}
                             </div>
                           </div>
                           <div className="text-center p-2 bg-red-50 rounded-lg">
                             <div className="text-xs text-gray-600 mb-1">ต้นทุนต่อจาน</div>
                             <div className="text-sm font-bold text-red-600">
-                              ฿{order.totalCost.toLocaleString(undefined, { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 2 
+                              ฿{order.totalCost.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
                               })}
                             </div>
                           </div>
                           <div className="text-center p-2 bg-green-50 rounded-lg">
                             <div className="text-xs text-gray-600 mb-1">กำไร</div>
                             <div className="text-sm font-bold text-green-600">
-                              ฿{profit.toLocaleString(undefined, { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 2 
+                              ฿{profit.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
                               })}
                             </div>
                           </div>
@@ -441,8 +464,8 @@ export default function DashboardPage() {
                                 inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold
                                 ${index === 0 ? 'bg-amber-400 text-amber-900 shadow-sm' :
                                   index === 1 ? 'bg-slate-300 text-slate-700 shadow-sm' :
-                                  index === 2 ? 'bg-orange-300 text-orange-800 shadow-sm' : 
-                                  'bg-gray-100 text-gray-600'}
+                                    index === 2 ? 'bg-orange-300 text-orange-800 shadow-sm' :
+                                      'bg-gray-100 text-gray-600'}
                               `}>
                                 {index + 1}
                               </span>
@@ -452,9 +475,9 @@ export default function DashboardPage() {
                               {data.quantity} <span className="text-gray-500 text-xs">ชิ้น</span>
                             </td>
                             <td className="px-4 py-3 text-right font-bold text-gray-900">
-                              ฿{data.sales.toLocaleString(undefined, { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 2 
+                              ฿{data.sales.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
                               })}
                             </td>
                           </tr>
@@ -482,12 +505,12 @@ export default function DashboardPage() {
                               shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-base font-bold shadow-sm
                               ${index === 0 ? 'bg-amber-400 text-amber-900' :
                                 index === 1 ? 'bg-slate-300 text-slate-700' :
-                                index === 2 ? 'bg-orange-300 text-orange-800' : 
-                                'bg-gray-100 text-gray-600'}
+                                  index === 2 ? 'bg-orange-300 text-orange-800' :
+                                    'bg-gray-100 text-gray-600'}
                             `}>
                               {index + 1}
                             </span>
-                            
+
                             {/* Menu Info */}
                             <div className="flex-1">
                               <div className="font-semibold text-gray-800 mb-1">{name}</div>
@@ -500,9 +523,9 @@ export default function DashboardPage() {
                           {/* Sales Amount */}
                           <div className="text-right">
                             <div className="text-lg font-bold text-gray-900">
-                              ฿{data.sales.toLocaleString(undefined, { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 2 
+                              ฿{data.sales.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
                               })}
                             </div>
                           </div>

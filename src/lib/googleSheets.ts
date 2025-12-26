@@ -38,6 +38,16 @@ export async function getSheet(title: string, headerValues: string[]) {
   let sheet = doc.sheetsByTitle[title];
   if (!sheet) {
     sheet = await doc.addSheet({ title, headerValues });
+  } else {
+    // Check if we need to add new columns to existing sheet
+    await sheet.loadHeaderRow();
+    const currentHeaders = sheet.headerValues;
+    const missingHeaders = headerValues.filter(h => !currentHeaders.includes(h));
+
+    if (missingHeaders.length > 0) {
+      const newHeaders = [...currentHeaders, ...missingHeaders];
+      await sheet.setHeaderRow(newHeaders);
+    }
   }
   return sheet;
 }

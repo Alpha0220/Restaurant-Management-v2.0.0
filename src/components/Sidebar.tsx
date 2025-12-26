@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, UtensilsCrossed, Package, Store, LogOut } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, Package, Store, LogOut, Wallet, DollarSign, ClipboardList } from 'lucide-react';
 import { logout } from '@/app/actions';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/menu', label: 'Menu', icon: UtensilsCrossed },
-  { href: '/stock', label: 'Stock', icon: Package },
+  { href: '/dashboard', label: 'รายงานรวม', icon: LayoutDashboard },
+  { href: '/menu', label: 'เมนูอาหาร', icon: UtensilsCrossed },
+  { href: '/ingredients-registry', label: 'ข้อมูลวัตถุดิบ', icon: ClipboardList },
+  { href: '/expense', label: 'บันทึกรายจ่าย', icon: Wallet },
+  { href: '/income', label: 'บันทึกรายรับ', icon: DollarSign },
   { href: '/pos', label: 'POS', icon: Store },
 ];
 
@@ -25,21 +27,20 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar - Hidden on mobile, shown on desktop */}
-      <aside 
-        className={`hidden md:flex flex-col bg-gray-900 text-white h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
-          isCollapsed ? 'w-20' : 'w-64'
-        }`}
+      <aside
+        className={`hidden md:flex flex-col bg-gray-900 text-white h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'
+          }`}
       >
         <div className={`p-4 border-b border-gray-800 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!isCollapsed && <h1 className="text-xl font-bold truncate">Restaurant App</h1>}
-          <button 
+          <button
             onClick={toggleSidebar}
             className="p-1 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
           >
             {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           </button>
         </div>
-        
+
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -64,9 +65,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
           <form action={logout}>
             <button
               type="submit"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-gray-800 w-full transition-colors ${
-                isCollapsed ? 'justify-center px-2' : ''
-              }`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-gray-800 w-full transition-colors ${isCollapsed ? 'justify-center px-2' : ''
+                }`}
               title={isCollapsed ? 'Logout' : ''}
             >
               <LogOut size={20} />

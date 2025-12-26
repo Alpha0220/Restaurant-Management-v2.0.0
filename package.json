@@ -12,6 +12,8 @@
     "cloudinary": "^2.8.0",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.0",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
     "google-auth-library": "^10.5.0",
     "google-spreadsheet": "^5.0.2",
     "googleapis": "^168.0.0",
@@ -24,6 +26,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/file-saver": "^2.0.7",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

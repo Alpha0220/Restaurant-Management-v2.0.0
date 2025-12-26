@@ -1,12 +1,28 @@
 'use client';
 
-import { getMenuItems, submitOrder } from '@/app/actions';
+import { getMenuItems, submitOrder, getRegisteredIngredients } from '@/app/actions';
 import { useEffect, useState } from 'react';
 import { ShoppingCart, Plus, Minus, X, Loader2 } from 'lucide-react';
+import Loading from '@/components/Loading';
+
+interface Ingredient {
+  name: string;
+  qty: number;
+  unit?: string;
+}
 
 interface MenuItem {
   name: string;
   price: number;
+  ingredients?: Ingredient[];
+  cost?: number; // Calculated cost
+}
+
+interface RegisteredIngredient {
+  name: string;
+  quantity: number;
+  price: number;
+  unit: string;
 }
 
 export default function POSPage() {
@@ -15,13 +31,42 @@ export default function POSPage() {
   const [message, setMessage] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false); // For mobile cart toggle
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // New state for Quantity Input Modal
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [quantityInput, setQuantityInput] = useState<number>(1);
 
   useEffect(() => {
-    getMenuItems().then(setMenuItems);
+    const initData = async () => {
+      setIsInitialLoading(true);
+      const [menus, registry] = await Promise.all([
+        getMenuItems(),
+        getRegisteredIngredients()
+      ]);
+
+      // Create a map for quick cost lookup: name -> costPerGram
+      const costMap = (registry as any[]).reduce((acc: Record<string, number>, item: RegisteredIngredient) => {
+        // We take the latest price (registry is sorted by date desc)
+        if (!acc[item.name]) {
+          acc[item.name] = item.price / item.quantity;
+        }
+        return acc;
+      }, {});
+
+      // Enrich menu items with calculated cost
+      const enrichedMenus = (menus as MenuItem[]).map(menu => {
+        const cost = (menu.ingredients || []).reduce((sum: number, ing: Ingredient) => {
+          const pricePerUnit = costMap[ing.name] || 0;
+          return sum + (pricePerUnit * ing.qty);
+        }, 0);
+        return { ...menu, cost };
+      });
+
+      setMenuItems(enrichedMenus);
+      setIsInitialLoading(false);
+    };
+    initData();
   }, []);
 
   const handleItemClick = (item: MenuItem) => {
@@ -79,6 +124,12 @@ export default function POSPage() {
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-gray-100 pb-16 md:pb-0 overflow-hidden relative">
+      {/* Loading Overlay */}
+      {isInitialLoading && (
+        <div className="fixed inset-0 bg-white/50 z-[100] flex items-center justify-center backdrop-blur-sm">
+          <Loading />
+        </div>
+      )}
       {/* Menu Section */}
       <div className="flex-1 p-4 overflow-y-auto">
         <h1 className="text-2xl font-bold mb-4 text-gray-800">เลือกเมนู</h1>
@@ -89,10 +140,20 @@ export default function POSPage() {
               onClick={() => handleItemClick(item)}
               className="bg-white p-3 rounded-lg shadow cursor-pointer hover:shadow-lg transition-shadow flex flex-col justify-between h-32"
             >
-              <h3 className="font-bold text-gray-800 line-clamp-2">{item.name}</h3>
+              <h3 className="font-bold text-gray-800 line-clamp-1">{item.name}</h3>
+              <div className="mt-1">
+                {item.cost !== undefined && item.cost > 0 && (
+                  <div className="flex flex-col text-[10px]">
+                    <span className="text-gray-500 font-medium">ต้นทุน: ฿{item.cost.toFixed(2)}</span>
+                    <span className={`${(item.price - item.cost) > 0 ? 'text-green-600' : 'text-red-600'} font-bold`}>
+                      กำไร: ฿{(item.price - item.cost).toFixed(2)} ({(((item.price - item.cost) / item.price) * 100).toFixed(0)}%)
+                    </span>
+                  </div>
+                )}
+              </div>
               <div className="flex justify-between items-end mt-2">
-                <p className="text-blue-600 font-bold">฿{item.price}</p>
-                <div className="bg-blue-100 p-1 rounded-full text-blue-600">
+                <p className="text-blue-600 font-bold text-lg">฿{item.price}</p>
+                <div className="bg-blue-600 p-1.5 rounded-lg text-white shadow-sm hover:bg-blue-700 transition-colors">
                   <Plus className="w-4 h-4" />
                 </div>
               </div>
